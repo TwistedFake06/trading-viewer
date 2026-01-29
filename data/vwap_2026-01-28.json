@@ -1,0 +1,23 @@
+[
+  {
+    "symbol": "AMD",
+    "date": "2026-01-28",
+    "close": 251.28,
+    "vwap": 249.9,
+    "close_vwap_pct": 0.55
+  },
+  {
+    "symbol": "NVDA",
+    "date": "2026-01-28",
+    "close": 900.12,
+    "vwap": 888.88,
+    "close_vwap_pct": 1.27
+  },
+  {
+    "symbol": "TSLA",
+    "date": "2026-01-28",
+    "close": 270.5,
+    "vwap": 272.0,
+    "close_vwap_pct": -0.55
+  }
+]

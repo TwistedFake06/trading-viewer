@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>VWAP 盤後小工具（StockData.org 免費版）</title>
+  <title>VWAP 盤後小工具（yfinance 版）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; padding: 16px; }
@@ -20,24 +20,14 @@
   </style>
 </head>
 <body>
-  <h1>📊 VWAP 盤後小工具（StockData.org 免費版）</h1>
+  <h1>📊 VWAP 盤後小工具（yfinance / JSON 版）</h1>
 
   <label>
-    標的（Ticker，例如：AMD, NVDA, TSLA）：
-    <input id="symbol" value="AMD" />
-  </label>
-
-  <label>
-    日期（美股交易日，格式：YYYY-MM-DD，例如：2026-01-28）：
+    日期（已在 GitHub 生成 vwap_YYYY-MM-DD.json）：
     <input id="date" value="2026-01-28" />
   </label>
 
-  <label>
-    StockData API Key（免費註冊取得）：
-    <input id="apiKey" placeholder="在這裡貼上你的 StockData API key" />
-  </label>
-
-  <button id="runBtn">取得資料並計算</button>
+  <button id="runBtn">載入 JSON 並顯示</button>
 
   <div id="result" class="result" style="display:none;"></div>
   <div id="error" class="error"></div>
@@ -45,8 +35,8 @@
   <pre id="debug"></pre>
 
   <p class="small">
-    說明：本工具會呼叫 StockData.org 的 intraday API（interval=minute），計算當日 VWAP，
-    並根據收盤與 VWAP 的偏離，自動給出簡單的 Scenario A/B/C 建議。 [web:39][web:64][file:2]
+    說明：本頁面不再直接打行情 API，而是讀取 <code>data/vwap_YYYY-MM-DD.json</code>，
+    該檔由 Python + yfinance 在 GitHub 中預先計算。 [web:47]
   </p>
 
   <script src="script.js"></script>
