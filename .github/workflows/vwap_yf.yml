@@ -1,10 +1,10 @@
 name: VWAP with yfinance
 
 on:
-  workflow_dispatch:    # 手動在 Actions 頁面觸發
+  workflow_dispatch:
 
 permissions:
-  contents: write       # 允許 github-actions[bot] 對 repo push
+  contents: write
 
 jobs:
   vwap:
@@ -23,15 +23,15 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Compute VWAP (fixed date)
+      - name: Compute VWAP for AMD (debug)
         run: |
-          # 先用固定日期測試，確認 vwap_yf.py 可以正常產生 JSON
-          python vwap_yf.py 2026-01-28 AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,SNDK,AVGO,INTC,QUBT
+          # 固定日期＋單一標的，方便看錯誤
+          python vwap_yf.py 2026-01-28 AMD
 
       - name: Commit VWAP JSON
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/ || echo "no data dir"
-          git commit -m "Update VWAP data" || echo "No changes to commit"
+          git commit -m "Update VWAP data (AMD only)" || echo "No changes to commit"
           git push
