@@ -7,6 +7,10 @@ import yfinance as yf
 
 
 def calc_vwap_for_symbol(symbol: str, date_str: str):
+    """
+    使用 yfinance 取得某一檔股票在指定日期的 1 分鐘資料，
+    計算當日 VWAP、收盤價與收盤相對 VWAP 的百分比。
+    """
     date = datetime.strptime(date_str, "%Y-%m-%d").date()
     next_date = date + timedelta(days=1)
 
@@ -49,8 +53,8 @@ def calc_vwap_for_symbol(symbol: str, date_str: str):
     low = df[low_col]
     vol = df[vol_col]
 
-    print(f"[DEBUG] Volume sample:\n{vol.head()}")
-    print(f"[DEBUG] Volume dtype: {vol.dtype}")
+    print(f"[DEBUG] Volume sample for {symbol}:\n{vol.head()}")
+    print(f"[DEBUG] Volume dtype for {symbol}: {vol.dtype}")
 
     tp = (high + low) / 2.0
     pv = tp * vol
@@ -77,27 +81,50 @@ def calc_vwap_for_symbol(symbol: str, date_str: str):
 
 
 def main():
-    # 暫時只支援一個 symbol，簡化 debug
+    """
+    用法：
+        python vwap_yf.py YYYY-MM-DD AMD,NVDA,TSLA
+
+    輸出：
+        data/vwap_YYYY-MM-DD.json
+        內容為多檔股票的列表：
+        [
+          {"symbol": "...", "date": "...", "close": ..., "vwap": ..., "close_vwap_pct": ...},
+          ...
+        ]
+    """
     if len(sys.argv) < 3:
-        print("Usage: python vwap_yf.py YYYY-MM-DD AMD", file=sys.stderr)
+        print("Usage: python vwap_yf.py YYYY-MM-DD AMD,NVDA,TSLA", file=sys.stderr)
         sys.exit(1)
 
     date_str = sys.argv[1]
-    symbol = sys.argv[2].strip().upper()
+    symbols_str = sys.argv[2]
+    symbols = [s.strip().upper() for s in symbols_str.split(",") if s.strip()]
 
-    print(f"[INFO] Start VWAP calc for {symbol} {date_str}")
-    res = calc_vwap_for_symbol(symbol, date_str)
+    results = []
+    for sym in symbols:
+        print(f"[INFO] Processing {sym} {date_str} ...")
+        try:
+            res = calc_vwap_for_symbol(sym, date_str)
+        except Exception as e:
+            print(f"[ERROR] {sym} {date_str} 計算失敗：{e}", file=sys.stderr)
+            continue
 
-    if res is None:
-        print("[WARN] 沒有任何結果。")
+        if res is not None:
+            results.append(res)
+
+    if not results:
+        print("[WARN] 此日期／標的組合沒有任何可用結果。")
         return
 
     import os
     os.makedirs("data", exist_ok=True)
-    out_path = f"data/vwap_{symbol}_{date_str}.json"
+
+    out_path = f"data/vwap_{date_str}.json"
     with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(res, f, ensure_ascii=False, indent=2)
-    print(f"[INFO] Wrote {out_path}")
+        json.dump(results, f, ensure_ascii=False, indent=2)
+
+    print(f"[INFO] Wrote {out_path} with {len(results)} records")
 
 
 if __name__ == "__main__":
