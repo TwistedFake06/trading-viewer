@@ -1,9 +1,9 @@
 // 使用 StockData.org 取得 intraday 1 分鐘 K，並計算當日 VWAP [web:39][web:64]
 
-async function fetchIntradayDataFromStockData(symbol, apiKey) {
-  // interval 可改成 5min/15min，看你需要；這裡先用 1min [web:39]
+async function fetchIntradayDataFromStockData(symbol, apiKey, targetDateStr) {
+  // 這裡加上 date 參數，格式 YYYY-MM-DD [web:39]
   const url =
-    `https://api.stockdata.org/v1/data/intraday?symbols=${encodeURIComponent(symbol)}&interval=1min&api_token=${encodeURIComponent(apiKey)}`;
+    `https://api.stockdata.org/v1/data/intraday?symbols=${encodeURIComponent(symbol)}&interval=1min&date=${encodeURIComponent(targetDateStr)}&api_token=${encodeURIComponent(apiKey)}`;
 
   const resp = await fetch(url);
   if (!resp.ok) {
@@ -12,7 +12,10 @@ async function fetchIntradayDataFromStockData(symbol, apiKey) {
 
   const json = await resp.json();
 
-  // StockData.org 會把 K 線放在 json.data 陣列裡 [web:39]
+  // 若有錯誤訊息，StockData 通常會在 meta 或 error 欄位給提示 [web:39][web:64]
+  if (json.error) {
+    throw new Error(`StockData 錯誤：${json.error}`);
+  }
   if (!json || !Array.isArray(json.data)) {
     throw new Error("回傳格式異常，找不到 data 陣列。");
   }
@@ -20,10 +23,11 @@ async function fetchIntradayDataFromStockData(symbol, apiKey) {
   return json.data;
 }
 
-// 過濾出指定日期的所有 1 分鐘 K
+// 過濾出指定日期的所有 1 分鐘 K（保險起見再過濾一次）
 function filterByDate(data, targetDateStr) {
   return data.filter(bar => {
-    // StockData 的日期通常是 ISO 字串，例如 "2026-01-28T15:59:00-05:00" [web:39]
+    // 日期通常是 ISO，例如 "2026-01-28T15:59:00-05:00" [web:39]
+    if (!bar.date) return false;
     const d = bar.date.split("T")[0];
     return d === targetDateStr;
   });
@@ -35,7 +39,7 @@ function calcVWAPAndClose(bars) {
     throw new Error("找不到這一天的 1 分鐘 K。請確認日期為交易日，且 API 有回傳資料。");
   }
 
-  // 確保按時間排序
+  // 按時間由早到晚排序
   const sorted = [...bars].sort((a, b) => new Date(a.date) - new Date(b.date));
 
   let pvSum = 0;
@@ -63,7 +67,7 @@ function calcVWAPAndClose(bars) {
   return { vwap, close, lastBarTime: lastBar.date };
 }
 
-// A/B/C 規則
+// A/B/C 規則（之後你可以自己調）
 function decideScenario(vwap, close) {
   const diff = close - vwap;
   const pct = (diff / vwap) * 100;
@@ -134,7 +138,7 @@ document.getElementById("runBtn").addEventListener("click", async () => {
   }
 
   try {
-    const raw = await fetchIntradayDataFromStockData(symbol, apiKey); // [web:39][web:64]
+    const raw = await fetchIntradayDataFromStockData(symbol, apiKey, dateStr); // [web:39][web:64]
     const dayBars = filterByDate(raw, dateStr);
     const { vwap, close, lastBarTime } = calcVWAPAndClose(dayBars);
     const { pct, scenario } = decideScenario(vwap, close);
