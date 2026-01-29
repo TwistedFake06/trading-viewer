@@ -26,7 +26,10 @@ jobs:
         run: |
           # 計算「昨天」的日期（依美東時間）
           python - << 'EOF'
-import datetime, zoneinfo, subprocess, shlex
+import datetime
+import zoneinfo
+import subprocess
+import shlex
 
 tz = zoneinfo.ZoneInfo("America/New_York")
 now = datetime.datetime.now(tz)
