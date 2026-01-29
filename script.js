@@ -1,4 +1,4 @@
-// 簡單的 debug logger：把訊息印到頁面下方的 <pre id="debug">
+// Debug logger：把訊息印到頁面下方的 <pre id="debug">
 function logDebug(message, obj) {
   const debugEl = document.getElementById("debug");
   const time = new Date().toISOString();
@@ -13,16 +13,16 @@ function logDebug(message, obj) {
   debugEl.textContent += line + "\n";
 }
 
-// 清空 debug
 function clearDebug() {
   const debugEl = document.getElementById("debug");
   debugEl.textContent = "";
 }
 
-// 使用 StockData.org 取得 intraday 1 分鐘 K [web:39][web:64]
+// 使用 StockData.org 取得 intraday 資料 [web:39][web:64]
 async function fetchIntradayDataFromStockData(symbol, apiKey, targetDateStr) {
+  // 這裡改成 interval=1（不少 API 用這種數字形式表示 1 分鐘） [web:39][web:64]
   const url =
-    `https://api.stockdata.org/v1/data/intraday?symbols=${encodeURIComponent(symbol)}&interval=1min&date=${encodeURIComponent(targetDateStr)}&api_token=${encodeURIComponent(apiKey)}`;
+    `https://api.stockdata.org/v1/data/intraday?symbols=${encodeURIComponent(symbol)}&interval=1&date=${encodeURIComponent(targetDateStr)}&api_token=${encodeURIComponent(apiKey)}`;
 
   logDebug("Request URL:", url);
 
@@ -39,7 +39,7 @@ async function fetchIntradayDataFromStockData(symbol, apiKey, targetDateStr) {
   logDebug("Raw JSON (truncated):", { meta: json.meta, sample: json.data ? json.data.slice(0, 3) : null });
 
   if (json.error) {
-    throw new Error(`StockData 錯誤：${json.error}`);
+    throw new Error(`StockData 錯誤：${JSON.stringify(json.error)}`);
   }
   if (!json || !Array.isArray(json.data)) {
     throw new Error("回傳格式異常，找不到 data 陣列。");
@@ -48,7 +48,7 @@ async function fetchIntradayDataFromStockData(symbol, apiKey, targetDateStr) {
   return json.data;
 }
 
-// 過濾日期
+// 再保險過濾一次日期
 function filterByDate(data, targetDateStr) {
   const filtered = data.filter(bar => {
     if (!bar.date) return false;
@@ -59,10 +59,10 @@ function filterByDate(data, targetDateStr) {
   return filtered;
 }
 
-// 計算 VWAP 與收盤
+// 計算當日全日 VWAP 與收盤價
 function calcVWAPAndClose(bars) {
   if (!bars || bars.length === 0) {
-    throw new Error("找不到這一天的 1 分鐘 K。請確認日期為交易日，且 API 有回傳資料。");
+    throw new Error("找不到這一天的 K 線資料。請確認日期為交易日，且 API 有回傳資料。");
   }
 
   const sorted = [...bars].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -96,7 +96,7 @@ function calcVWAPAndClose(bars) {
   return { vwap, close, lastBarTime: lastBar.date };
 }
 
-// Scenario
+// Scenario A/B/C 判斷
 function decideScenario(vwap, close) {
   const diff = close - vwap;
   const pct = (diff / vwap) * 100;
@@ -174,7 +174,7 @@ document.getElementById("runBtn").addEventListener("click", async () => {
   }
 
   try {
-    const raw = await fetchIntradayDataFromStockData(symbol, apiKey, dateStr);
+    const raw = await fetchIntradayDataFromStockData(symbol, apiKey, dateStr); // [web:39][web:64]
     const dayBars = filterByDate(raw, dateStr);
     const { vwap, close, lastBarTime } = calcVWAPAndClose(dayBars);
     const { pct, scenario } = decideScenario(vwap, close);
