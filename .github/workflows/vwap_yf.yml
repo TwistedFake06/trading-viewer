@@ -1,9 +1,10 @@
 name: VWAP with yfinance
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: "5 1 * * 2-6"
+  workflow_dispatch:    # 手動在 Actions 頁面觸發
+
+permissions:
+  contents: write       # 允許 github-actions[bot] 對 repo push
 
 jobs:
   vwap:
@@ -22,9 +23,10 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Compute VWAP with yfinance
+      - name: Compute VWAP (fixed date)
         run: |
-          python -c "import datetime, zoneinfo, subprocess, shlex; tz = zoneinfo.ZoneInfo('America/New_York'); now = datetime.datetime.now(tz); yesterday = now.date() - datetime.timedelta(days=1); date_str = yesterday.strftime('%Y-%m-%d'); print('Date:', date_str); symbols = 'AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,SNDK,AVGO,INTC,QUBT'; cmd = f'python vwap_yf.py {date_str} {symbols}'; print('Running:', cmd); subprocess.check_call(shlex.split(cmd))"
+          # 先用固定日期測試，確認 vwap_yf.py 可以正常產生 JSON
+          python vwap_yf.py 2026-01-28 AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,SNDK,AVGO,INTC,QUBT
 
       - name: Commit VWAP JSON
         run: |
