@@ -16,7 +16,7 @@ function clearDebug() {
   document.getElementById("debug").textContent = "";
 }
 
-// 從 data/vwap_YYYY-MM-DD.json 讀資料
+// 從 data/vwap_YYYY-MM-DD.json 讀資料（多檔）
 async function loadVwapJson(dateStr) {
   const path = "data/vwap_" + dateStr + ".json";
   logDebug("Fetch JSON:", path);
@@ -27,6 +27,9 @@ async function loadVwapJson(dateStr) {
   }
   const json = await resp.json();
   logDebug("JSON loaded, count:", json.length);
+  if (json.length > 0) {
+    logDebug("First row sample:", json[0]);
+  }
   return json; // 陣列 [{symbol,date,close,vwap,close_vwap_pct}, ...]
 }
 
@@ -42,29 +45,32 @@ function renderResult(dateStr, rows) {
   const resultDiv = document.getElementById("result");
   resultDiv.style.display = "block";
 
-  // 建表格
-  let tableHtml = '<table>';
-  tableHtml += '<tr><th>Ticker</th><th>日期</th><th>收盤</th><th>VWAP</th><th>收盤-VWAP%</th><th>Scenario</th></tr>';
+  // 依 symbol 排序，方便閱讀
+  const sorted = rows.slice().sort((a, b) => a.symbol.localeCompare(b.symbol));
 
-  rows.forEach(row => {
+  // 建表格
+  let tableHtml = "<table>";
+  tableHtml += "<tr><th>Ticker</th><th>日期</th><th>收盤</th><th>VWAP</th><th>收盤-VWAP%</th><th>Scenario</th></tr>";
+
+  sorted.forEach(row => {
     const pct = row.close_vwap_pct;
     const scenario = decideScenario(pct);
     tableHtml +=
-      '<tr>' +
-      '<td>' + row.symbol + '</td>' +
-      '<td>' + row.date + '</td>' +
-      '<td>' + row.close.toFixed(4) + '</td>' +
-      '<td>' + row.vwap.toFixed(4) + '</td>' +
-      '<td>' + pct.toFixed(2) + '%</td>' +
-      '<td>' + scenario + '</td>' +
-      '</tr>';
+      "<tr>" +
+      "<td>" + row.symbol + "</td>" +
+      "<td>" + row.date + "</td>" +
+      "<td>" + row.close.toFixed(4) + "</td>" +
+      "<td>" + row.vwap.toFixed(4) + "</td>" +
+      "<td>" + pct.toFixed(2) + "%</td>" +
+      "<td>" + scenario + "</td>" +
+      "</tr>";
   });
 
-  tableHtml += '</table>';
+  tableHtml += "</table>";
 
   // 建 Markdown 片段
   let md = "### VWAP 盤後摘要（" + dateStr + "）\n\n";
-  rows.forEach(row => {
+  sorted.forEach(row => {
     const pct = row.close_vwap_pct;
     const scenario = decideScenario(pct);
     md +=
@@ -83,7 +89,7 @@ function renderResult(dateStr, rows) {
     '<p style="margin-top:12px;font-size:14px;">以下為可直接貼到盤後筆記的 Markdown：</p>' +
     '<pre style="white-space:pre-wrap;font-size:12px;border:1px solid #ddd;border-radius:4px;padding:8px;background:#fafafa;">' +
     md +
-    '</pre>';
+    "</pre>";
 }
 
 // 按鈕事件
