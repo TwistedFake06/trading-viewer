@@ -30,7 +30,7 @@ async function loadVwapJson(dateStr) {
   if (json.length > 0) {
     logDebug("First row sample:", json[0]);
   }
-  return json; // 陣列 [{symbol,date,close,vwap,close_vwap_pct}, ...]
+  return json;
 }
 
 // 根據 close_vwap_pct 決定 Scenario
@@ -45,7 +45,7 @@ function renderResult(dateStr, rows) {
   const resultDiv = document.getElementById("result");
   resultDiv.style.display = "block";
 
-  // 依 symbol 排序，方便閱讀
+  // 依 symbol 排序，顯示全部（不再 slice(0,3)）
   const sorted = rows.slice().sort((a, b) => a.symbol.localeCompare(b.symbol));
 
   // 建表格

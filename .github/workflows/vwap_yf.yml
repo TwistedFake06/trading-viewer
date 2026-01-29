@@ -2,7 +2,7 @@ name: VWAP with yfinance
 
 on:
   schedule:
-    # 每天 11:00 UTC（香港時間每天 19:00）
+    # 每天 11:00 UTC（香港時間 19:00）
     - cron: '0 11 * * *'
   workflow_dispatch:
 
@@ -12,7 +12,6 @@ permissions:
 jobs:
   vwap:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,8 +27,9 @@ jobs:
 
       - name: Compute VWAP for watchlist
         run: |
-          # 這裡列出你的整個 watchlist
-          python vwap_yf.py 2026-01-28 "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,SNDK,AVGO,INTC,QUBT"
+          # 自動使用當天日期（UTC）
+          DATE=$(date -u +'%Y-%m-%d')
+          python vwap_yf.py "$DATE" "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,SNDK,AVGO,INTC,QUBT"
 
       - name: Commit VWAP JSON
         run: |
