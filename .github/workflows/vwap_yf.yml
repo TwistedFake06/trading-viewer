@@ -23,15 +23,15 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Compute VWAP for AMD (debug)
+      - name: Compute VWAP for watchlist
         run: |
-          # 固定日期＋單一標的，方便看錯誤
-          python vwap_yf.py 2026-01-28 AMD
+          # 這裡列出你的整個 watchlist
+          python vwap_yf.py 2026-01-28 "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,SNDK,AVGO,INTC,QUBT"
 
       - name: Commit VWAP JSON
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/ || echo "no data dir"
-          git commit -m "Update VWAP data (AMD only)" || echo "No changes to commit"
+          git commit -m "Update VWAP data (watchlist)" || echo "No changes to commit"
           git push
