@@ -18,6 +18,7 @@ def calc_vwap_for_symbol(symbol: str, date_str: str):
         end=next_date.strftime("%Y-%m-%d"),
         progress=False
     )
+
     print(f"[DEBUG] df type: {type(df)}")
     print(f"[DEBUG] df.head():\n{df.head()}")
     print(f"[DEBUG] df.columns: {list(df.columns)}")
@@ -26,22 +27,44 @@ def calc_vwap_for_symbol(symbol: str, date_str: str):
         print(f"[WARN] {symbol} {date_str} 無資料（df.empty）")
         return None
 
-    # 這裡先只拿第一列的 Volume 做實驗，確認類型
-    vol_series = df["Volume"]
-    print(f"[DEBUG] Volume dtype: {vol_series.dtype}, sample: {vol_series.head()}")
+    # 處理 MultiIndex 欄位：('Close','AMD') 這一類
+    if isinstance(df.columns, pd.MultiIndex):
+        close_col = ("Close", symbol)
+        high_col = ("High", symbol)
+        low_col = ("Low", symbol)
+        vol_col = ("Volume", symbol)
+    else:
+        close_col = "Close"
+        high_col = "High"
+        low_col = "Low"
+        vol_col = "Volume"
 
-    vol_sum_raw = vol_series.sum()
+    # 確保必要欄位存在
+    for col in [close_col, high_col, low_col, vol_col]:
+        if col not in df.columns:
+            print(f"[WARN] {symbol} {date_str} 缺少欄位 {col}，跳過。")
+            return None
+
+    high = df[high_col]
+    low = df[low_col]
+    vol = df[vol_col]
+
+    print(f"[DEBUG] Volume sample:\n{vol.head()}")
+    print(f"[DEBUG] Volume dtype: {vol.dtype}")
+
+    tp = (high + low) / 2.0
+    pv = tp * vol
+
+    vol_sum_raw = vol.sum()
     print(f"[DEBUG] vol_sum_raw type: {type(vol_sum_raw)}, value: {vol_sum_raw}")
 
-    # 強制用 float() 試一次，如果這裡還爆，就可以精準看到是哪個 type
     vol_sum = float(vol_sum_raw)
-    print(f"[DEBUG] vol_sum float: {vol_sum}")
+    if vol_sum == 0.0:
+        print(f"[WARN] {symbol} {date_str} 成交量總和為 0，跳過。")
+        return None
 
-    # 若能走到這裡，代表 float() 已經不會再抱怨 Series
-    tp = (df["High"] + df["Low"]) / 2.0
-    pv = tp * df["Volume"]
     vwap = float(pv.sum()) / vol_sum
-    close = float(df["Close"].iloc[-1])
+    close = float(df[close_col].iloc[-1])
     pct = (close - vwap) / vwap * 100.0
 
     return {
