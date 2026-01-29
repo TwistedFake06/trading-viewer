@@ -1,18 +1,43 @@
-// 使用 StockData.org 取得 intraday 1 分鐘 K，並計算當日 VWAP [web:39][web:64]
+// 簡單的 debug logger：把訊息印到頁面下方的 <pre id="debug">
+function logDebug(message, obj) {
+  const debugEl = document.getElementById("debug");
+  const time = new Date().toISOString();
+  let line = `[${time}] ${message}`;
+  if (obj !== undefined) {
+    try {
+      line += " " + JSON.stringify(obj, null, 2);
+    } catch (e) {
+      line += " (JSON stringify error)";
+    }
+  }
+  debugEl.textContent += line + "\n";
+}
 
+// 清空 debug
+function clearDebug() {
+  const debugEl = document.getElementById("debug");
+  debugEl.textContent = "";
+}
+
+// 使用 StockData.org 取得 intraday 1 分鐘 K [web:39][web:64]
 async function fetchIntradayDataFromStockData(symbol, apiKey, targetDateStr) {
-  // 這裡加上 date 參數，格式 YYYY-MM-DD [web:39]
   const url =
     `https://api.stockdata.org/v1/data/intraday?symbols=${encodeURIComponent(symbol)}&interval=1min&date=${encodeURIComponent(targetDateStr)}&api_token=${encodeURIComponent(apiKey)}`;
 
+  logDebug("Request URL:", url);
+
   const resp = await fetch(url);
+  logDebug("HTTP status:", { status: resp.status, statusText: resp.statusText });
+
   if (!resp.ok) {
+    const text = await resp.text().catch(() => "");
+    logDebug("Non-OK response body:", text);
     throw new Error(`HTTP 錯誤：${resp.status}`);
   }
 
   const json = await resp.json();
+  logDebug("Raw JSON (truncated):", { meta: json.meta, sample: json.data ? json.data.slice(0, 3) : null });
 
-  // 若有錯誤訊息，StockData 通常會在 meta 或 error 欄位給提示 [web:39][web:64]
   if (json.error) {
     throw new Error(`StockData 錯誤：${json.error}`);
   }
@@ -23,23 +48,23 @@ async function fetchIntradayDataFromStockData(symbol, apiKey, targetDateStr) {
   return json.data;
 }
 
-// 過濾出指定日期的所有 1 分鐘 K（保險起見再過濾一次）
+// 過濾日期
 function filterByDate(data, targetDateStr) {
-  return data.filter(bar => {
-    // 日期通常是 ISO，例如 "2026-01-28T15:59:00-05:00" [web:39]
+  const filtered = data.filter(bar => {
     if (!bar.date) return false;
     const d = bar.date.split("T")[0];
     return d === targetDateStr;
   });
+  logDebug("Bars after date filter:", { count: filtered.length });
+  return filtered;
 }
 
-// 計算當日全日 VWAP 與收盤價
+// 計算 VWAP 與收盤
 function calcVWAPAndClose(bars) {
   if (!bars || bars.length === 0) {
     throw new Error("找不到這一天的 1 分鐘 K。請確認日期為交易日，且 API 有回傳資料。");
   }
 
-  // 按時間由早到晚排序
   const sorted = [...bars].sort((a, b) => new Date(a.date) - new Date(b.date));
 
   let pvSum = 0;
@@ -56,6 +81,8 @@ function calcVWAPAndClose(bars) {
     volSum += volume;
   });
 
+  logDebug("VWAP calc summary:", { pvSum, volSum });
+
   if (volSum === 0) {
     throw new Error("當日成交量為 0 或資料異常，無法計算 VWAP。");
   }
@@ -64,10 +91,12 @@ function calcVWAPAndClose(bars) {
   const lastBar = sorted[sorted.length - 1];
   const close = Number(lastBar.close);
 
+  logDebug("VWAP & close:", { vwap, close, lastBarTime: lastBar.date });
+
   return { vwap, close, lastBarTime: lastBar.date };
 }
 
-// A/B/C 規則（之後你可以自己調）
+// Scenario
 function decideScenario(vwap, close) {
   const diff = close - vwap;
   const pct = (diff / vwap) * 100;
@@ -80,6 +109,8 @@ function decideScenario(vwap, close) {
   } else {
     scenario = "C（中性：收盤貼近 VWAP）";
   }
+
+  logDebug("Scenario decision:", { diff, pct, scenario });
 
   return { pct, scenario };
 }
@@ -121,7 +152,7 @@ function renderResult(symbol, dateStr, vwap, close, pct, scenario, lastBarTime) 
   `;
 }
 
-// 綁定按鈕
+// 按鈕事件
 document.getElementById("runBtn").addEventListener("click", async () => {
   const symbol = document.getElementById("symbol").value.trim().toUpperCase();
   const dateStr = document.getElementById("date").value.trim();
@@ -131,14 +162,19 @@ document.getElementById("runBtn").addEventListener("click", async () => {
   const resultDiv = document.getElementById("result");
   errorDiv.textContent = "";
   resultDiv.style.display = "none";
+  clearDebug();
+
+  logDebug("Input params:", { symbol, dateStr });
 
   if (!symbol || !dateStr || !apiKey) {
-    errorDiv.textContent = "請先填寫 Ticker、日期與 StockData API Key。";
+    const msg = "請先填寫 Ticker、日期與 StockData API Key。";
+    errorDiv.textContent = msg;
+    logDebug("Error:", msg);
     return;
   }
 
   try {
-    const raw = await fetchIntradayDataFromStockData(symbol, apiKey, dateStr); // [web:39][web:64]
+    const raw = await fetchIntradayDataFromStockData(symbol, apiKey, dateStr);
     const dayBars = filterByDate(raw, dateStr);
     const { vwap, close, lastBarTime } = calcVWAPAndClose(dayBars);
     const { pct, scenario } = decideScenario(vwap, close);
@@ -146,5 +182,6 @@ document.getElementById("runBtn").addEventListener("click", async () => {
   } catch (e) {
     console.error(e);
     errorDiv.textContent = "出錯了：" + e.message;
+    logDebug("Caught error:", e.message);
   }
 });
