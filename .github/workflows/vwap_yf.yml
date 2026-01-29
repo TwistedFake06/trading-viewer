@@ -1,9 +1,9 @@
 name: VWAP with yfinance
 
 on:
-  workflow_dispatch:        # 允許手動觸發
+  workflow_dispatch:
   schedule:
-    - cron: "5 1 * * 2-6"   # 週二~週六 UTC 01:05 自動跑（可之後再調）
+    - cron: "5 1 * * 2-6"
 
 jobs:
   vwap:
@@ -24,24 +24,16 @@ jobs:
 
       - name: Compute VWAP with yfinance
         run: |
-          python - << 'EOF'
-import datetime
-import zoneinfo
-import subprocess
-import shlex
-
-tz = zoneinfo.ZoneInfo("America/New_York")
-now = datetime.datetime.now(tz)
-yesterday = now.date() - datetime.timedelta(days=1)
-date_str = yesterday.strftime("%Y-%m-%d")
-print("Date:", date_str)
-
-symbols = "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,SNDK,AVGO,INTC,QUBT"
-
-cmd = f"python vwap_yf.py {date_str} {symbols}"
-print("Running:", cmd)
-subprocess.check_call(shlex.split(cmd))
-EOF
+          python -c "import datetime, zoneinfo, subprocess, shlex; \
+tz = zoneinfo.ZoneInfo('America/New_York'); \
+now = datetime.datetime.now(tz); \
+yesterday = now.date() - datetime.timedelta(days=1); \
+date_str = yesterday.strftime('%Y-%m-%d'); \
+print('Date:', date_str); \
+symbols = 'AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,SNDK,AVGO,INTC,QUBT'; \
+cmd = f'python vwap_yf.py {date_str} {symbols}'; \
+print('Running:', cmd); \
+subprocess.check_call(shlex.split(cmd))"
 
       - name: Commit VWAP JSON
         run: |
