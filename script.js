@@ -18,28 +18,50 @@ function clearDebug() {
   debugEl.textContent = "";
 }
 
-// 使用 StockData.org 取得 intraday 資料 [web:39][web:64]
+// 使用 StockData.org 的 intraday endpoint [file:2]
 async function fetchIntradayDataFromStockData(symbol, apiKey, targetDateStr) {
-  // 這裡改成 interval=1（不少 API 用這種數字形式表示 1 分鐘） [web:39][web:64]
+  // 官方文件：interval 可為 minute / hour，預設 minute
+  // 這裡顯式設 interval=minute，並使用 date=YYYY-MM-DD 過濾當日 [file:2]
   const url =
-    `https://api.stockdata.org/v1/data/intraday?symbols=${encodeURIComponent(symbol)}&interval=1&date=${encodeURIComponent(targetDateStr)}&api_token=${encodeURIComponent(apiKey)}`;
+    `https://api.stockdata.org/v1/data/intraday?symbols=${encodeURIComponent(symbol)}&interval=minute&date=${encodeURIComponent(targetDateStr)}&api_token=${encodeURIComponent(apiKey)}`;
 
   logDebug("Request URL:", url);
 
   const resp = await fetch(url);
   logDebug("HTTP status:", { status: resp.status, statusText: resp.statusText });
 
+  const textBody = await resp.text().catch(() => "");
+  logDebug("Raw response text (truncated):", textBody.slice(0, 500));
+
   if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    logDebug("Non-OK response body:", text);
+    // 若 body 是 JSON，嘗試解析，以便看到 error.code / message
+    try {
+      const errJson = JSON.parse(textBody);
+      logDebug("Error JSON:", errJson);
+      if (errJson.error) {
+        throw new Error(`StockData 錯誤：${errJson.error.code} - ${errJson.error.message}`);
+      }
+    } catch (_) {
+      // 不是 JSON 就忽略
+    }
     throw new Error(`HTTP 錯誤：${resp.status}`);
   }
 
-  const json = await resp.json();
-  logDebug("Raw JSON (truncated):", { meta: json.meta, sample: json.data ? json.data.slice(0, 3) : null });
+  let json;
+  try {
+    json = textBody ? JSON.parse(textBody) : {};
+  } catch (e) {
+    logDebug("JSON parse error:", e.message);
+    throw new Error("回傳不是合法 JSON。");
+  }
+
+  logDebug("JSON meta/sample:", {
+    meta: json.meta,
+    sample: json.data ? json.data.slice(0, 3) : null
+  });
 
   if (json.error) {
-    throw new Error(`StockData 錯誤：${JSON.stringify(json.error)}`);
+    throw new Error(`StockData 錯誤：${json.error.code} - ${json.error.message}`);
   }
   if (!json || !Array.isArray(json.data)) {
     throw new Error("回傳格式異常，找不到 data 陣列。");
@@ -71,9 +93,10 @@ function calcVWAPAndClose(bars) {
   let volSum = 0;
 
   sorted.forEach(bar => {
-    const high = Number(bar.high);
-    const low = Number(bar.low);
-    const volume = Number(bar.volume);
+    // 根據文件：intraday data 的價格在 data.open/high/low/close 裡 [file:2]
+    const high = Number(bar.data?.high ?? bar.high);
+    const low = Number(bar.data?.low ?? bar.low);
+    const volume = Number(bar.data?.volume ?? bar.volume);
     if (!isFinite(high) || !isFinite(low) || !isFinite(volume)) return;
 
     const typicalPrice = (high + low) / 2;
@@ -89,8 +112,8 @@ function calcVWAPAndClose(bars) {
 
   const vwap = pvSum / volSum;
   const lastBar = sorted[sorted.length - 1];
-  const close = Number(lastBar.close);
 
+  const close = Number(lastBar.data?.close ?? lastBar.close);
   logDebug("VWAP & close:", { vwap, close, lastBarTime: lastBar.date });
 
   return { vwap, close, lastBarTime: lastBar.date };
@@ -174,14 +197,8 @@ document.getElementById("runBtn").addEventListener("click", async () => {
   }
 
   try {
-    const raw = await fetchIntradayDataFromStockData(symbol, apiKey, dateStr); // [web:39][web:64]
+    const raw = await fetchIntradayDataFromStockData(symbol, apiKey, dateStr); // [file:2]
     const dayBars = filterByDate(raw, dateStr);
     const { vwap, close, lastBarTime } = calcVWAPAndClose(dayBars);
     const { pct, scenario } = decideScenario(vwap, close);
-    renderResult(symbol, dateStr, vwap, close, pct, scenario, lastBarTime);
-  } catch (e) {
-    console.error(e);
-    errorDiv.textContent = "出錯了：" + e.message;
-    logDebug("Caught error:", e.message);
-  }
-});
+    renderResult(symbol, dateStr, vwap, close, pct, scen
