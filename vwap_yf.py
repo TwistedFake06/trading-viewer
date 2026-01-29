@@ -11,11 +11,9 @@ def calc_vwap_for_symbol(symbol: str, date_str: str):
     使用 yfinance 取得某一檔股票在指定日期的 1 分鐘資料，
     計算當日 VWAP、收盤價與收盤相對 VWAP 的百分比。
     """
-    # 轉成日期物件
     date = datetime.strptime(date_str, "%Y-%m-%d").date()
     next_date = date + timedelta(days=1)
 
-    # 抓取 [date, next_date) 區間的 1 分鐘 K 線
     df = yf.download(
         symbol,
         interval="1m",
@@ -28,27 +26,37 @@ def calc_vwap_for_symbol(symbol: str, date_str: str):
         print(f"[WARN] {symbol} {date_str} 無資料（df.empty）")
         return None
 
-    # typical price = (High + Low) / 2
-    tp = (df["High"] + df["Low"]) / 2.0
-    pv = tp * df["Volume"]
+    # 確保必要欄位存在
+    for col in ["High", "Low", "Close", "Volume"]:
+        if col not in df.columns:
+            print(f"[WARN] {symbol} {date_str} 缺少欄位 {col}，跳過。")
+            return None
 
-    # 強制轉成純量，避免 pandas Series 的 truth value 問題
-    vol_sum = float(df["Volume"].sum())
+    tp = (df["High"] + df["Low"]) / 2.0              # Series
+    pv = tp * df["Volume"]                           # Series
+
+    vol_sum_series = df["Volume"].sum()              # 可能是 numpy scalar 或 Series
+    vol_sum = float(vol_sum_series)                  # 轉成純量
     if vol_sum == 0.0:
         print(f"[WARN] {symbol} {date_str} 成交量總和為 0，跳過。")
         return None
 
-    vwap = float(pv.sum()) / vol_sum
-    close = float(df["Close"].iloc[-1])
+    vwap_series_sum = pv.sum()
+    vwap = float(vwap_series_sum) / vol_sum          # 先 float 再除
+
+    close_value = df["Close"].iloc[-1]
+    close = float(close_value)
+
     pct = (close - vwap) / vwap * 100.0
 
-    result = {
+    return {
         "symbol": symbol,
         "date": date_str,
         "close": round(close, 4),
         "vwap": round(vwap, 4),
         "close_vwap_pct": round(pct, 4)
     }
+
     return result
 
 
