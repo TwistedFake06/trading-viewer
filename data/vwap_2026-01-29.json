@@ -1,0 +1,86 @@
+[
+  {
+    "symbol": "AMD",
+    "date": "2026-01-29",
+    "close": 248.62,
+    "vwap": 254.2499,
+    "close_vwap_pct": -2.2143
+  },
+  {
+    "symbol": "NVDA",
+    "date": "2026-01-29",
+    "close": 189.42,
+    "vwap": 190.6606,
+    "close_vwap_pct": -0.6507
+  },
+  {
+    "symbol": "TSLA",
+    "date": "2026-01-29",
+    "close": 423.5836,
+    "vwap": 428.266,
+    "close_vwap_pct": -1.0933
+  },
+  {
+    "symbol": "AAPL",
+    "date": "2026-01-29",
+    "close": 257.63,
+    "vwap": 257.2399,
+    "close_vwap_pct": 0.1516
+  },
+  {
+    "symbol": "SMCI",
+    "date": "2026-01-29",
+    "close": 29.94,
+    "vwap": 30.191,
+    "close_vwap_pct": -0.8312
+  },
+  {
+    "symbol": "MSFT",
+    "date": "2026-01-29",
+    "close": 428.66,
+    "vwap": 431.9127,
+    "close_vwap_pct": -0.7531
+  },
+  {
+    "symbol": "ONDS",
+    "date": "2026-01-29",
+    "close": 11.515,
+    "vwap": 11.7992,
+    "close_vwap_pct": -2.4083
+  },
+  {
+    "symbol": "RGTI",
+    "date": "2026-01-29",
+    "close": 20.435,
+    "vwap": 20.874,
+    "close_vwap_pct": -2.103
+  },
+  {
+    "symbol": "SNDK",
+    "date": "2026-01-29",
+    "close": 533.61,
+    "vwap": 531.9493,
+    "close_vwap_pct": 0.3122
+  },
+  {
+    "symbol": "AVGO",
+    "date": "2026-01-29",
+    "close": 328.275,
+    "vwap": 331.9676,
+    "close_vwap_pct": -1.1123
+  },
+  {
+    "symbol": "INTC",
+    "date": "2026-01-29",
+    "close": 48.545,
+    "vwap": 47.9984,
+    "close_vwap_pct": 1.1389
+  },
+  {
+    "symbol": "QUBT",
+    "date": "2026-01-29",
+    "close": 10.77,
+    "vwap": 10.7708,
+    "close_vwap_pct": -0.0078
+  }
+]
