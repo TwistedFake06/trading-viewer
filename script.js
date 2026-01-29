@@ -1,35 +1,44 @@
-// 簡單 VWAP 計算：從 FMP 1 分鐘 K 線取得當日資料並計算 VWAP [web:42][web:45]
+// 使用 StockData.org 取得 intraday 1 分鐘 K，並計算當日 VWAP [web:39][web:64]
 
-async function fetchIntradayData(symbol, apiKey) {
+async function fetchIntradayDataFromStockData(symbol, apiKey) {
+  // interval 可改成 5min/15min，看你需要；這裡先用 1min [web:39]
   const url =
-    `https://financialmodelingprep.com/stable/historical-chart/1min?symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(apiKey)}`;
+    `https://api.stockdata.org/v1/data/intraday?symbols=${encodeURIComponent(symbol)}&interval=1min&api_token=${encodeURIComponent(apiKey)}`;
+
   const resp = await fetch(url);
   if (!resp.ok) {
     throw new Error(`HTTP 錯誤：${resp.status}`);
   }
-  const data = await resp.json();
-  return data; // 陣列，每筆有 date, open, high, low, close, volume 等欄位 [web:42]
+
+  const json = await resp.json();
+
+  // StockData.org 會把 K 線放在 json.data 陣列裡 [web:39]
+  if (!json || !Array.isArray(json.data)) {
+    throw new Error("回傳格式異常，找不到 data 陣列。");
+  }
+
+  return json.data;
 }
 
-// 過濾出「指定日期」的所有 1 分鐘 K（FMP 回傳通常是最近一段時間，需自己篩選） [web:42]
+// 過濾出指定日期的所有 1 分鐘 K
 function filterByDate(data, targetDateStr) {
   return data.filter(bar => {
-    // FMP 的 date 格式通常像：2026-01-28 15:59:00
-    const d = bar.date.split(" ")[0];
+    // StockData 的日期通常是 ISO 字串，例如 "2026-01-28T15:59:00-05:00" [web:39]
+    const d = bar.date.split("T")[0];
     return d === targetDateStr;
   });
 }
 
-// 計算「當日全日 VWAP」與收盤價
+// 計算當日全日 VWAP 與收盤價
 function calcVWAPAndClose(bars) {
   if (!bars || bars.length === 0) {
     throw new Error("找不到這一天的 1 分鐘 K。請確認日期為交易日，且 API 有回傳資料。");
   }
 
-  // FMP 通常最新的在陣列最前面，所以先排序成時間由早到晚 [web:42]
+  // 確保按時間排序
   const sorted = [...bars].sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  let pvSum = 0; // price * volume 的總和
+  let pvSum = 0;
   let volSum = 0;
 
   sorted.forEach(bar => {
@@ -54,7 +63,7 @@ function calcVWAPAndClose(bars) {
   return { vwap, close, lastBarTime: lastBar.date };
 }
 
-// 簡易 Scenario A/B/C 規則（你之後可調整）
+// A/B/C 規則
 function decideScenario(vwap, close) {
   const diff = close - vwap;
   const pct = (diff / vwap) * 100;
@@ -71,7 +80,7 @@ function decideScenario(vwap, close) {
   return { pct, scenario };
 }
 
-// 將結果渲染到頁面
+// 顯示結果
 function renderResult(symbol, dateStr, vwap, close, pct, scenario, lastBarTime) {
   const resultDiv = document.getElementById("result");
   resultDiv.style.display = "block";
@@ -102,13 +111,13 @@ function renderResult(symbol, dateStr, vwap, close, pct, scenario, lastBarTime) 
         <td>${scenario}</td>
       </tr>
     </table>
-    <p style="margin-top:8px;font-size:12px;color:#666;">最後一根 K 時間（FMP 資料）：${lastBarTime}</p>
+    <p style="margin-top:8px;font-size:12px;color:#666;">最後一根 K 時間（StockData 資料）：${lastBarTime}</p>
     <p style="margin-top:12px;font-size:14px;">以下為可直接貼到你的盤後筆記的 Markdown：</p>
     <pre style="white-space:pre-wrap;font-size:12px;border:1px solid #ddd;border-radius:4px;padding:8px;background:#fafafa;">${markdownSnippet}</pre>
   `;
 }
 
-// 綁定按鈕事件
+// 綁定按鈕
 document.getElementById("runBtn").addEventListener("click", async () => {
   const symbol = document.getElementById("symbol").value.trim().toUpperCase();
   const dateStr = document.getElementById("date").value.trim();
@@ -120,12 +129,12 @@ document.getElementById("runBtn").addEventListener("click", async () => {
   resultDiv.style.display = "none";
 
   if (!symbol || !dateStr || !apiKey) {
-    errorDiv.textContent = "請先填寫 Ticker、日期與 FMP API Key。";
+    errorDiv.textContent = "請先填寫 Ticker、日期與 StockData API Key。";
     return;
   }
 
   try {
-    const raw = await fetchIntradayData(symbol, apiKey);         // [web:42][web:45]
+    const raw = await fetchIntradayDataFromStockData(symbol, apiKey); // [web:39][web:64]
     const dayBars = filterByDate(raw, dateStr);
     const { vwap, close, lastBarTime } = calcVWAPAndClose(dayBars);
     const { pct, scenario } = decideScenario(vwap, close);
