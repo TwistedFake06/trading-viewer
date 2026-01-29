@@ -1,6 +1,9 @@
 name: VWAP with yfinance
 
 on:
+  schedule:
+    # 每天 11:00 UTC（香港時間每天 19:00）
+    - cron: '0 11 * * *'
   workflow_dispatch:
 
 permissions:
