@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>VWAP 盤後小工具</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; padding: 16px; }
+    h1 { font-size: 20px; }
+    label { display: block; margin-top: 8px; }
+    input { padding: 6px; font-size: 16px; width: 100%; box-sizing: border-box; }
+    button { margin-top: 12px; padding: 8px 12px; font-size: 16px; }
+    .result { margin-top: 16px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; }
+    .error { color: #b00020; }
+    table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+    th, td { border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 14px; }
+    th { background: #f5f5f5; }
+    .small { font-size: 12px; color: #666; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>📊 VWAP 盤後小工具（FMP 免費版）</h1>
+
+  <label>
+    標的（Ticker，例如：AMD, NVDA, TSLA）：
+    <input id="symbol" value="AMD" />
+  </label>
+
+  <label>
+    日期（美股交易日，格式：YYYY-MM-DD，例如：2026-01-28）：
+    <input id="date" value="2026-01-28" />
+  </label>
+
+  <label>
+    FMP API Key（免費註冊取得）：
+    <input id="apiKey" placeholder="在這裡貼上你的 FMP key" />
+  </label>
+
+  <button id="runBtn">取得資料並計算</button>
+
+  <div id="result" class="result" style="display:none;"></div>
+  <div id="error" class="error"></div>
+
+  <p class="small">
+    說明：本工具會呼叫 Financial Modeling Prep 的 1 分鐘 K 線 API，計算當日全日 VWAP，
+    並根據收盤與 VWAP 的偏離，自動給出簡單的 Scenario A/B/C 建議。 [web:42][web:45]
+  </p>
+
+  <script src="script.js"></script>
+</body>
+</html>
