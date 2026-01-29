@@ -22,7 +22,7 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Compute VWAP with yfinance
+      - name: Compute VWAP for fixed date
         run: |
           python -c "import datetime, zoneinfo, subprocess, shlex; \
 tz = zoneinfo.ZoneInfo('America/New_York'); \
