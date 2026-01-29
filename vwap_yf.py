@@ -57,8 +57,6 @@ def calc_vwap_for_symbol(symbol: str, date_str: str):
         "close_vwap_pct": round(pct, 4)
     }
 
-    return result
-
 
 def main():
     """
