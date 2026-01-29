@@ -16,6 +16,7 @@
     th, td { border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 14px; }
     th { background: #f5f5f5; }
     .small { font-size: 12px; color: #666; margin-top: 8px; }
+    #debug { margin-top: 16px; font-size: 11px; background: #111; color: #9f9; padding: 8px; border-radius: 6px; white-space: pre-wrap; }
   </style>
 </head>
 <body>
@@ -40,6 +41,9 @@
 
   <div id="result" class="result" style="display:none;"></div>
   <div id="error" class="error"></div>
+
+  <!-- 新增：Debug 區塊 -->
+  <pre id="debug"></pre>
 
   <p class="small">
     說明：本工具會呼叫 StockData.org 的 1 分鐘 K 線 API，計算當日全日 VWAP，
