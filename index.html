@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>VWAP 盤後小工具</title>
+  <title>VWAP 盤後小工具（StockData 免費版）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; padding: 16px; }
@@ -19,7 +19,7 @@
   </style>
 </head>
 <body>
-  <h1>📊 VWAP 盤後小工具（FMP 免費版）</h1>
+  <h1>📊 VWAP 盤後小工具（StockData.org 免費版）</h1>
 
   <label>
     標的（Ticker，例如：AMD, NVDA, TSLA）：
@@ -32,8 +32,8 @@
   </label>
 
   <label>
-    FMP API Key（免費註冊取得）：
-    <input id="apiKey" placeholder="在這裡貼上你的 FMP key" />
+    StockData API Key（免費註冊取得）：
+    <input id="apiKey" placeholder="在這裡貼上你的 StockData API key" />
   </label>
 
   <button id="runBtn">取得資料並計算</button>
@@ -42,8 +42,8 @@
   <div id="error" class="error"></div>
 
   <p class="small">
-    說明：本工具會呼叫 Financial Modeling Prep 的 1 分鐘 K 線 API，計算當日全日 VWAP，
-    並根據收盤與 VWAP 的偏離，自動給出簡單的 Scenario A/B/C 建議。 [web:42][web:45]
+    說明：本工具會呼叫 StockData.org 的 1 分鐘 K 線 API，計算當日全日 VWAP，
+    並根據收盤與 VWAP 的偏離，自動給出簡單的 Scenario A/B/C 建議。 [web:39][web:64]
   </p>
 
   <script src="script.js"></script>
