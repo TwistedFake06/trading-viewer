@@ -1,31 +1,47 @@
-# 📊 VWAP 盤後小工具（yfinance / JSON + 前端檢視）
+# 📊 VWAP & Premarket Trading Dashboard
 
-這個專案每天自動抓取美股 1 分鐘資料，計算各股票的全日 VWAP，輸出成 JSON，並提供一個簡單的前端頁面，方便盤後快速檢視與複製 Markdown 筆記。 [web:137]
+這是一個全自動的美股交易輔助工具，整合了 **盤後 VWAP 分析** 與 **盤前策略掃描**。利用 GitHub Actions 自動抓取資料，並透過靜態網頁 (GitHub Pages) 提供互動式圖表與 Markdown 筆記生成。
+
+![Dashboard Preview](https://via.placeholder.com/800x400?text=Dashboard+Preview) <!-- 你可以之後換成真的截圖 -->
+
+## 🚀 主要功能
+
+### 1. 📉 盤後 VWAP 分析 (After Hours Analysis)
+- **自動計算**：每日收盤後自動抓取當日 5 分鐘 K 線 (5m Intraday)。
+- **VWAP 策略**：計算全日 VWAP，並根據收盤價相對位置判斷多空 (Scenario A/B/C)。
+- **智能回退**：若當日無資料（如週末或休市），自動往前尋找最近一個交易日。
+- **輸出筆記**：一鍵生成可直接貼到 Obsidian / Notion 的 Markdown 格式筆記。
+
+### 2. 🚀 盤前掃描 (Premarket Scan)
+- **盤前快篩**：在美股開盤前 (Pre-market) 掃描 Watchlist。
+- **多維度評分**：綜合「昨日趨勢」、「盤前漲跌幅」、「期權流動性」進行打分。
+- **重點標記**：自動標示高分標的與異常波動股。
+
+### 3. 🕯️ 互動式圖表 (Intraday Charts)
+- **K 線圖**：整合 TradingView Lightweight Charts，支援 5m K 線。
+- **技術指標**：
+  - **VWAP** (成交量加權平均價) 黃色線。
+  - **Volume** (成交量) 底部柱狀圖，綠漲紅跌。
+- **即點即看**：在儀表板點擊任一 Ticker 即可跳轉至該檔股票的詳細走勢圖。
 
 ---
 
-## 功能總覽
-
-- 使用 GitHub Actions 定時抓取美股 1 分鐘資料（yfinance）。 [web:137]
-- 依自訂 watchlist 計算每天的收盤價、VWAP 與收盤相對 VWAP 百分比。 [web:139]
-- 將結果存成 `data/vwap_YYYY-MM-DD.json`。 [web:139]
-- 透過靜態前端（`index.html` + `script.js`）載入 JSON，產生表格與可直接貼到筆記的 Markdown 段落。 [web:137]
-
----
-
-## 專案結構
+## 🛠️ 專案結構
 
 ```text
 .
-├── .github/
-│   └── workflows/
-│       └── vwap.yml          # GitHub Actions：排程與手動執行 VWAP 計算
+├── .github/workflows/
+│   ├── vwap_yf.yml         # [排程] 盤後 VWAP 計算 (自動重試 + 5m K線)
+│   └── premarket.yml       # [排程] 盤前掃描策略
 ├── data/
-│   └── vwap_YYYY-MM-DD.json  # 每日 VWAP 結果（盤後計算輸出）
-├── src/                      # Python 計算腳本
-│   ├── main.py               # 入口：讀 watchlist、呼叫 yfinance、計算 VWAP
-│   ├── vwap_calc.py          # VWAP 計算邏輯與輔助函式
-│   └── config.py             # 設定：watchlist、時間區間等
-├── index.html                # 前端頁面：表單 + 結果表格 + Markdown 輸出
-├── script.js                 # 前端邏輯：載入 JSON、渲染 Scenario 與 Markdown
-└── README.md                 # 本文件
+│   ├── vwap_YYYY-MM-DD.json       # 每日盤後 Summary
+│   ├── premarket_YYYY-MM-DD.json  # 每日盤前 Scan 結果
+│   └── intraday/                  # 詳細 K 線數據 (供圖表用)
+├── src/
+│   ├── vwap_yf.py          # 核心計算：VWAP、Intraday Data、自動回退邏輯
+│   └── premarket_scan.py   # 盤前邏輯：昨收、盤前漲跌、期權評分
+├── index.html              # 主儀表板 (Dashboard)
+├── chart.html              # K 線圖表頁面
+├── script.js               # 前端邏輯 (載入 JSON、渲染表格、Markdown 生成)
+├── chart.js                # 圖表邏輯 (Lightweight Charts 繪圖)
+└── requirements.txt        # Python 依賴 (yfinance, pandas, etc.)
