@@ -1,9 +1,56 @@
 import sys
 import json
 import os
+import traceback
 from datetime import datetime, timedelta
 import pandas as pd
 import yfinance as yf
+
+# ---------------------------------------------------------
+# Helper: Robust Column Mapping
+# ---------------------------------------------------------
+def find_columns(df):
+    """
+    自動尋找 DataFrame 中對應 Open/High/Low/Close/Volume 的欄位名稱。
+    不論是 MultiIndex 還是單層 Index，不論大小寫，都能抓到。
+    回傳一個 dict: {'open': col_name, 'high': col_name, ...}
+    """
+    mapping = {}
+    required = ['open', 'high', 'low', 'close', 'volume']
+    
+    # 遍歷所有欄位，尋找關鍵字
+    for col in df.columns:
+        # 如果是 MultiIndex (Tuple)，就把所有層級轉成字串合併搜尋
+        # 如果是 SingleIndex (String)，直接搜尋
+        col_str = str(col).lower()
+        
+        # 檢查是否包含關鍵字 (精確匹配比較安全，避免 'Adj Close' 混淆)
+        # 對於 MultiIndex，通常是 ('Close', 'AMD') 這樣的 tuple
+        
+        parts = []
+        if isinstance(col, tuple):
+            parts = [str(p).lower() for p in col]
+        else:
+            parts = [str(col).lower()]
+            
+        for p in parts:
+            if p == 'open': mapping['open'] = col
+            elif p == 'high': mapping['high'] = col
+            elif p == 'low': mapping['low'] = col
+            elif p == 'volume': mapping['volume'] = col
+            elif p == 'close': 
+                # 排除 Adj Close，除非只有 Adj Close
+                # 這裡簡單處理：只要是 Close 就先抓，如果有更精確的再說
+                # yfinance 通常回傳 'Close' 和 'Adj Close'
+                # 我們優先找完全等於 'close' 的 part
+                mapping['close'] = col
+
+    # 檢查是否缺欄位
+    missing = [k for k in required if k not in mapping]
+    if missing:
+        return None, f"Missing columns: {missing}"
+        
+    return mapping, None
 
 # ---------------------------------------------------------
 # Helper: Save Intraday Data for Charting
@@ -14,34 +61,45 @@ def save_intraday_data(df, symbol, date_str):
     格式: [{time, open, high, low, close, volume, vwap}, ...]
     """
     try:
-        # 統一欄位名稱
-        if isinstance(df.columns, pd.MultiIndex):
-            col_map = {
-                ("Open", symbol): "open", ("High", symbol): "high", 
-                ("Low", symbol): "low", ("Close", symbol): "close", 
-                ("Volume", symbol): "volume"
-            }
-        else:
-            col_map = {"Open": "open", "High": "high", "Low": "low", "Close": "close", "Volume": "volume"}
+        # 1. 取得欄位對映
+        col_map, err = find_columns(df)
+        if err:
+            print(f"[WARN] Skip chart for {symbol}: {err}")
+            return
+
+        # 2. 複製並重命名標準欄位
+        temp_df = df.rename(columns={
+            col_map['open']: 'open',
+            col_map['high']: 'high',
+            col_map['low']: 'low',
+            col_map['close']: 'close',
+            col_map['volume']: 'volume'
+        }).copy()
         
-        # 複製並重命名
-        temp_df = df.rename(columns=col_map).copy()
+        # 只留需要的欄位
+        temp_df = temp_df[['open', 'high', 'low', 'close', 'volume']]
         
-        # 確保只有這幾欄
-        temp_df = temp_df[["open", "high", "low", "close", "volume"]]
-        
-        # 計算 Intraday VWAP Curve
+        # 3. 計算 Intraday VWAP Curve
+        # VWAP = Cumulative(Price * Volume) / Cumulative(Volume)
+        # 這裡用典型價格 (High+Low+Close)/3
         temp_df['tp'] = (temp_df['high'] + temp_df['low'] + temp_df['close']) / 3
         temp_df['pv'] = temp_df['tp'] * temp_df['volume']
+        
         temp_df['cum_pv'] = temp_df['pv'].cumsum()
         temp_df['cum_vol'] = temp_df['volume'].cumsum()
-        temp_df['vwap'] = temp_df['cum_pv'] / temp_df['cum_vol']
         
-        # 轉 List of Dict
+        # 避開除以零
+        temp_df['vwap'] = temp_df['cum_pv'] / temp_df['cum_vol'].replace(0, 1)
+        
+        # 4. 轉 List of Dict (Lightweight Charts 格式)
         chart_data = []
         for idx, row in temp_df.iterrows():
-            # Time 轉 Unix Timestamp
+            # Index 是 Datetime
             ts = int(idx.timestamp())
+            
+            # 簡單防呆：過濾掉 Volume=0 且價格沒動的數據(選擇性)
+            # 這裡保留所有數據
+            
             chart_data.append({
                 "time": ts,
                 "open": round(row['open'], 2),
@@ -52,7 +110,7 @@ def save_intraday_data(df, symbol, date_str):
                 "vwap": round(row['vwap'], 2)
             })
             
-        # 存檔
+        # 5. 存檔
         dir_path = "data/intraday"
         os.makedirs(dir_path, exist_ok=True)
         file_path = f"{dir_path}/intraday_{symbol}_{date_str}.json"
@@ -60,10 +118,11 @@ def save_intraday_data(df, symbol, date_str):
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(chart_data, f)
             
-        print(f"[INFO] Saved chart data: {file_path}")
+        print(f"[INFO] Saved chart data: {file_path} ({len(chart_data)} bars)")
         
     except Exception as e:
         print(f"[WARN] Failed to save intraday data for {symbol}: {e}")
+        # traceback.print_exc() # Debug 用
 
 # ---------------------------------------------------------
 # Core Logic
@@ -80,15 +139,19 @@ def calc_vwap_for_symbol(symbol: str, date_str: str, interval: str = "1m", max_r
             print(f"[INFO] {symbol} {date_str} 無資料，嘗試 {actual_date_str} (往前 {days_ago} 天)")
         
         try:
+            # 下載資料
+            # auto_adjust=False 確保我們拿到原始的 Open/High/Low/Close
+            # multi_level_index=False 嘗試強制單層索引 (yfinance 新版參數，舊版可能忽略)
             df = yf.download(
                 symbol,
                 interval=interval,
                 start=actual_date_str,
                 end=next_date.strftime("%Y-%m-%d"),
-                progress=False
+                progress=False,
+                auto_adjust=False 
             )
         except Exception as e:
-            print(f"[WARN] Download failed: {e}")
+            print(f"[WARN] Download failed for {symbol}: {e}")
             continue
         
         if df.empty:
@@ -97,23 +160,22 @@ def calc_vwap_for_symbol(symbol: str, date_str: str, interval: str = "1m", max_r
                 print(f"[WARN] {symbol} 往前找 {max_retry_days} 天都無資料，跳過。")
                 return None
         
-        # 欄位處理
-        if isinstance(df.columns, pd.MultiIndex):
-            close_col, high_col, low_col, vol_col = ("Close", symbol), ("High", symbol), ("Low", symbol), ("Volume", symbol)
-        else:
-            close_col, high_col, low_col, vol_col = "Close", "High", "Low", "Volume"
-        
-        missing = [c for c in [close_col, high_col, low_col, vol_col] if c not in df.columns]
-        if missing:
-            print(f"[WARN] {symbol} 缺少欄位 {missing}")
+        # --- 抓取欄位 ---
+        col_map, err = find_columns(df)
+        if err:
+            print(f"[WARN] {symbol} column error: {err}")
             if days_ago < max_retry_days: continue
             return None
-        
-        # --- 成功抓到資料後，先存一份給 Chart 用 ---
+            
+        # --- 存圖表資料 (Intraday JSON) ---
         save_intraday_data(df, symbol, actual_date_str)
         
-        # 開始算 Summary VWAP
-        high, low, vol = df[high_col], df[low_col], df[vol_col]
+        # --- 計算 Summary VWAP ---
+        # 使用對映好的欄位名稱取值
+        high = df[col_map['high']]
+        low = df[col_map['low']]
+        vol = df[col_map['volume']]
+        close_series = df[col_map['close']]
         
         vol_sum = float(vol.sum())
         if vol_sum == 0.0:
@@ -124,7 +186,9 @@ def calc_vwap_for_symbol(symbol: str, date_str: str, interval: str = "1m", max_r
         tp = (high + low) / 2.0
         pv = tp * vol
         vwap = float(pv.sum()) / vol_sum
-        close = float(df[close_col].iloc[-1])
+        
+        # 取最後一筆收盤價
+        close = float(close_series.iloc[-1])
         pct = (close - vwap) / vwap * 100.0
         
         return {
@@ -155,6 +219,7 @@ def main():
             if res: results.append(res)
         except Exception as e:
             print(f"[ERROR] {sym}: {e}")
+            traceback.print_exc()
             
     if not results:
         print("[WARN] No results generated.")
