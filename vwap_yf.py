@@ -159,7 +159,7 @@ def main():
     
     date_str = sys.argv[1]
     symbols = [s.strip().upper() for s in sys.argv[2].split(",") if s.strip()]
-    interval = sys.argv[3] if len(sys.argv) > 3 else "1m"
+    interval = sys.argv[3] if len(sys.argv) > 3 else "5m"
     
     results = []
     print(f"[INFO] Processing {len(symbols)} symbols for {date_str}...")
