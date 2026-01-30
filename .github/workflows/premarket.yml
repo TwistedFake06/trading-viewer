@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install yfinance pandas lxml
-      - run: python premarket_scan.py "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,SNDK,AVGO,INTC,QUBT"
+      - run: python premarket_scan.py "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT"
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
