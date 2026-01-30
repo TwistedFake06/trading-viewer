@@ -7,99 +7,56 @@ import pandas as pd
 import yfinance as yf
 
 # ---------------------------------------------------------
-# Helper: Robust Column Mapping
+# Helper: Ultra-Robust Column Normalization
 # ---------------------------------------------------------
-def find_columns(df):
+def normalize_dataframe(df):
     """
-    自動尋找 DataFrame 中對應 Open/High/Low/Close/Volume 的欄位名稱。
-    不論是 MultiIndex 還是單層 Index，不論大小寫，都能抓到。
-    回傳一個 dict: {'open': col_name, 'high': col_name, ...}
+    將 DataFrame 欄位強制轉為標準單層小寫：open, high, low, close, volume
+    解決 MultiIndex 和大小寫問題
     """
-    mapping = {}
-    required = ['open', 'high', 'low', 'close', 'volume']
+    # 1. 如果是 MultiIndex，只取第一層 (Price Type)，忽略 Ticker
+    if isinstance(df.columns, pd.MultiIndex):
+        # df.columns 可能是 [('Open', 'AMD'), ('High', 'AMD')...]
+        # 我們只取 level 0: 'Open', 'High'...
+        df.columns = df.columns.get_level_values(0)
     
-    # 遍歷所有欄位，尋找關鍵字
-    for col in df.columns:
-        # 如果是 MultiIndex (Tuple)，就把所有層級轉成字串合併搜尋
-        # 如果是 SingleIndex (String)，直接搜尋
-        col_str = str(col).lower()
+    # 2. 全部轉小寫
+    df.columns = [str(c).lower().strip() for c in df.columns]
+    
+    # 3. 處理 'adj close' vs 'close'
+    # 如果只有 adj close 沒有 close，就把 adj close 當作 close
+    if 'close' not in df.columns and 'adj close' in df.columns:
+        df = df.rename(columns={'adj close': 'close'})
         
-        # 檢查是否包含關鍵字 (精確匹配比較安全，避免 'Adj Close' 混淆)
-        # 對於 MultiIndex，通常是 ('Close', 'AMD') 這樣的 tuple
-        
-        parts = []
-        if isinstance(col, tuple):
-            parts = [str(p).lower() for p in col]
-        else:
-            parts = [str(col).lower()]
-            
-        for p in parts:
-            if p == 'open': mapping['open'] = col
-            elif p == 'high': mapping['high'] = col
-            elif p == 'low': mapping['low'] = col
-            elif p == 'volume': mapping['volume'] = col
-            elif p == 'close': 
-                # 排除 Adj Close，除非只有 Adj Close
-                # 這裡簡單處理：只要是 Close 就先抓，如果有更精確的再說
-                # yfinance 通常回傳 'Close' 和 'Adj Close'
-                # 我們優先找完全等於 'close' 的 part
-                mapping['close'] = col
-
-    # 檢查是否缺欄位
-    missing = [k for k in required if k not in mapping]
+    # 4. 檢查必要欄位
+    required = ['open', 'high', 'low', 'close', 'volume']
+    missing = [c for c in required if c not in df.columns]
+    
     if missing:
-        return None, f"Missing columns: {missing}"
+        return None, f"Missing columns after normalization: {missing}. Available: {list(df.columns)}"
         
-    return mapping, None
+    # 5. 只回傳需要的欄位，過濾掉其他的
+    return df[required], None
 
 # ---------------------------------------------------------
 # Helper: Save Intraday Data for Charting
 # ---------------------------------------------------------
 def save_intraday_data(df, symbol, date_str):
-    """
-    將 DataFrame 轉成前端 Lightweight Charts 需要的格式並存檔
-    格式: [{time, open, high, low, close, volume, vwap}, ...]
-    """
     try:
-        # 1. 取得欄位對映
-        col_map, err = find_columns(df)
-        if err:
-            print(f"[WARN] Skip chart for {symbol}: {err}")
-            return
-
-        # 2. 複製並重命名標準欄位
-        temp_df = df.rename(columns={
-            col_map['open']: 'open',
-            col_map['high']: 'high',
-            col_map['low']: 'low',
-            col_map['close']: 'close',
-            col_map['volume']: 'volume'
-        }).copy()
+        # 使用正規化後的 df，這裡一定有 open, high...
+        # 轉換 Intraday VWAP
+        temp_df = df.copy()
         
-        # 只留需要的欄位
-        temp_df = temp_df[['open', 'high', 'low', 'close', 'volume']]
-        
-        # 3. 計算 Intraday VWAP Curve
-        # VWAP = Cumulative(Price * Volume) / Cumulative(Volume)
-        # 這裡用典型價格 (High+Low+Close)/3
+        # 典型的 VWAP 公式
         temp_df['tp'] = (temp_df['high'] + temp_df['low'] + temp_df['close']) / 3
         temp_df['pv'] = temp_df['tp'] * temp_df['volume']
-        
         temp_df['cum_pv'] = temp_df['pv'].cumsum()
         temp_df['cum_vol'] = temp_df['volume'].cumsum()
+        temp_df['vwap'] = temp_df['cum_pv'] / temp_df['cum_vol'].replace(0, 1) # 防除以0
         
-        # 避開除以零
-        temp_df['vwap'] = temp_df['cum_pv'] / temp_df['cum_vol'].replace(0, 1)
-        
-        # 4. 轉 List of Dict (Lightweight Charts 格式)
         chart_data = []
         for idx, row in temp_df.iterrows():
-            # Index 是 Datetime
             ts = int(idx.timestamp())
-            
-            # 簡單防呆：過濾掉 Volume=0 且價格沒動的數據(選擇性)
-            # 這裡保留所有數據
-            
             chart_data.append({
                 "time": ts,
                 "open": round(row['open'], 2),
@@ -110,7 +67,6 @@ def save_intraday_data(df, symbol, date_str):
                 "vwap": round(row['vwap'], 2)
             })
             
-        # 5. 存檔
         dir_path = "data/intraday"
         os.makedirs(dir_path, exist_ok=True)
         file_path = f"{dir_path}/intraday_{symbol}_{date_str}.json"
@@ -122,7 +78,7 @@ def save_intraday_data(df, symbol, date_str):
         
     except Exception as e:
         print(f"[WARN] Failed to save intraday data for {symbol}: {e}")
-        # traceback.print_exc() # Debug 用
+        traceback.print_exc()
 
 # ---------------------------------------------------------
 # Core Logic
@@ -139,16 +95,15 @@ def calc_vwap_for_symbol(symbol: str, date_str: str, interval: str = "1m", max_r
             print(f"[INFO] {symbol} {date_str} 無資料，嘗試 {actual_date_str} (往前 {days_ago} 天)")
         
         try:
-            # 下載資料
-            # auto_adjust=False 確保我們拿到原始的 Open/High/Low/Close
-            # multi_level_index=False 嘗試強制單層索引 (yfinance 新版參數，舊版可能忽略)
+            # 下載：強制 auto_adjust=False 拿原始價，group_by='ticker' 讓結構單純一點
             df = yf.download(
                 symbol,
                 interval=interval,
                 start=actual_date_str,
                 end=next_date.strftime("%Y-%m-%d"),
                 progress=False,
-                auto_adjust=False 
+                auto_adjust=False,
+                group_by='column' # 嘗試讓它不分層
             )
         except Exception as e:
             print(f"[WARN] Download failed for {symbol}: {e}")
@@ -160,40 +115,36 @@ def calc_vwap_for_symbol(symbol: str, date_str: str, interval: str = "1m", max_r
                 print(f"[WARN] {symbol} 往前找 {max_retry_days} 天都無資料，跳過。")
                 return None
         
-        # --- 抓取欄位 ---
-        col_map, err = find_columns(df)
+        # --- 關鍵修復：正規化 DataFrame ---
+        df_norm, err = normalize_dataframe(df)
         if err:
-            print(f"[WARN] {symbol} column error: {err}")
+            print(f"[WARN] {symbol} data error: {err}")
             if days_ago < max_retry_days: continue
             return None
             
-        # --- 存圖表資料 (Intraday JSON) ---
-        save_intraday_data(df, symbol, actual_date_str)
+        # --- 存圖表資料 ---
+        save_intraday_data(df_norm, symbol, actual_date_str)
         
         # --- 計算 Summary VWAP ---
-        # 使用對映好的欄位名稱取值
-        high = df[col_map['high']]
-        low = df[col_map['low']]
-        vol = df[col_map['volume']]
-        close_series = df[col_map['close']]
+        high = df_norm['high']
+        low = df_norm['low']
+        vol = df_norm['volume']
+        close_series = df_norm['close']
         
         vol_sum = float(vol.sum())
-        if vol_sum == 0.0:
-            print(f"[WARN] {symbol} Vol=0")
+        if vol_sum == 0:
             if days_ago < max_retry_days: continue
             return None
             
         tp = (high + low) / 2.0
         pv = tp * vol
         vwap = float(pv.sum()) / vol_sum
-        
-        # 取最後一筆收盤價
         close = float(close_series.iloc[-1])
         pct = (close - vwap) / vwap * 100.0
         
         return {
             "symbol": symbol,
-            "date": actual_date_str,
+            "date": actual_date_str, # 回傳實際有資料的日期
             "close": round(close, 4),
             "vwap": round(vwap, 4),
             "close_vwap_pct": round(pct, 4)
@@ -219,7 +170,6 @@ def main():
             if res: results.append(res)
         except Exception as e:
             print(f"[ERROR] {sym}: {e}")
-            traceback.print_exc()
             
     if not results:
         print("[WARN] No results generated.")
