@@ -30,7 +30,7 @@ jobs:
           # 自動使用前一天日期（UTC）
           DATE=$(date -u -d '1 day ago' +'%Y-%m-%d')
           # 在最後面加上 "5m" 參數
-          python vwap_yf.py "$DATE" "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,SNDK,AVGO,INTC,QUBT" "5m"
+          python vwap_yf.py "$DATE" "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT" "5m"
 
 
       - name: Commit VWAP JSON
