@@ -20,7 +20,7 @@ function clearDebug() {
 
 // -------------------- Data Loading --------------------
 
-// 載入 VWAP JSON
+// 載入 VWAP JSON (盤後數據)
 async function loadVwapJson(dateStr) {
   const path = "data/vwap_" + dateStr + ".json";
   logDebug("Fetching VWAP:", path);
@@ -29,7 +29,7 @@ async function loadVwapJson(dateStr) {
   return await resp.json();
 }
 
-// 載入 Premarket JSON
+// 載入 Premarket JSON (盤前掃描)
 async function loadPremarketJson(dateStr) {
   const path = "data/premarket_" + dateStr + ".json";
   logDebug("Fetching Premarket:", path);
@@ -57,8 +57,13 @@ function renderVwapResult(dateStr, rows) {
   sorted.forEach(row => {
     const pct = row.close_vwap_pct;
     const styleClass = pct > 0 ? "trend-up" : (pct < 0 ? "trend-down" : "");
+    
+    // 建立連到 chart.html 的連結
+    // 注意：row.date 確保連結到該筆資料實際存在的日期
+    const symbolLink = `<a href="chart.html?symbol=${row.symbol}&date=${row.date}" target="_blank" style="text-decoration:none; color:#007bff; font-weight:bold;">${row.symbol}</a>`;
+    
     html += `<tr>
-      <td><b>${row.symbol}</b></td>
+      <td>${symbolLink}</td>
       <td>${row.close.toFixed(2)}</td>
       <td>${row.vwap.toFixed(2)}</td>
       <td class="${styleClass}">${pct.toFixed(2)}%</td>
@@ -67,7 +72,7 @@ function renderVwapResult(dateStr, rows) {
   });
   html += "</tbody></table>";
 
-  // Markdown
+  // Markdown 輸出區塊
   let md = `### VWAP 盤後摘要 (${dateStr})\n\n`;
   sorted.forEach(row => {
     md += `- **${row.symbol}**: 收 ${row.close} (VWAP ${row.vwap}) | ${row.close_vwap_pct}% (${decideScenario(row.close_vwap_pct)})\n`;
@@ -93,8 +98,13 @@ function renderPremarketResult(dateStr, rows) {
     const changeClass = row.change_pct > 0 ? "trend-up" : (row.change_pct < 0 ? "trend-down" : "");
     const scoreClass = row.total_score >= 4 ? "score-high" : "";
     
+    // 盤前掃描通常還沒有當日的 Intraday 圖 (因為還沒收盤/剛開盤)
+    // 但如果有 premarket 數據，或許 chart.html 也能顯示部分
+    // 這裡一樣加上連結，使用者點進去若有檔就能看
+    const symbolLink = `<a href="chart.html?symbol=${row.symbol}&date=${dateStr}" target="_blank" style="text-decoration:none; color:#007bff; font-weight:bold;">${row.symbol}</a>`;
+    
     html += `<tr>
-      <td><b>${row.symbol}</b></td>
+      <td>${symbolLink}</td>
       <td>${row.prev_trend}</td>
       <td>${row.price.toFixed(2)}</td>
       <td class="${changeClass}">${row.change_pct.toFixed(2)}%</td>
@@ -104,7 +114,7 @@ function renderPremarketResult(dateStr, rows) {
   });
   html += "</tbody></table>";
 
-  // Markdown
+  // Markdown 輸出區塊 (Top 5)
   let md = `### 盤前重點掃描 (${dateStr})\n\n`;
   sorted.slice(0, 5).forEach(row => {
     const icon = row.change_pct > 0 ? "📈" : "📉";
