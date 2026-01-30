@@ -2,85 +2,92 @@
   {
     "symbol": "AMD",
     "date": "2026-01-29",
-    "close": 248.62,
-    "vwap": 254.2499,
-    "close_vwap_pct": -2.2143
+    "close": 252.09,
+    "vwap": 249.1402,
+    "close_vwap_pct": 1.184
   },
   {
     "symbol": "NVDA",
     "date": "2026-01-29",
-    "close": 189.42,
-    "vwap": 190.6606,
-    "close_vwap_pct": -0.6507
+    "close": 192.43,
+    "vwap": 189.7227,
+    "close_vwap_pct": 1.427
   },
   {
     "symbol": "TSLA",
     "date": "2026-01-29",
-    "close": 423.5836,
-    "vwap": 428.266,
-    "close_vwap_pct": -1.0933
+    "close": 416.44,
+    "vwap": 422.2664,
+    "close_vwap_pct": -1.3798
   },
   {
     "symbol": "AAPL",
     "date": "2026-01-29",
-    "close": 257.63,
-    "vwap": 257.2399,
-    "close_vwap_pct": 0.1516
+    "close": 258.175,
+    "vwap": 257.2303,
+    "close_vwap_pct": 0.3673
   },
   {
     "symbol": "SMCI",
     "date": "2026-01-29",
-    "close": 29.94,
-    "vwap": 30.191,
-    "close_vwap_pct": -0.8312
+    "close": 30.125,
+    "vwap": 29.9013,
+    "close_vwap_pct": 0.7481
   },
   {
     "symbol": "MSFT",
     "date": "2026-01-29",
-    "close": 428.66,
-    "vwap": 431.9127,
-    "close_vwap_pct": -0.7531
+    "close": 433.48,
+    "vwap": 427.8812,
+    "close_vwap_pct": 1.3085
   },
   {
     "symbol": "ONDS",
     "date": "2026-01-29",
-    "close": 11.515,
-    "vwap": 11.7992,
-    "close_vwap_pct": -2.4083
+    "close": 11.27,
+    "vwap": 11.4703,
+    "close_vwap_pct": -1.7463
   },
   {
     "symbol": "RGTI",
     "date": "2026-01-29",
-    "close": 20.435,
-    "vwap": 20.874,
-    "close_vwap_pct": -2.103
+    "close": 19.836,
+    "vwap": 20.1623,
+    "close_vwap_pct": -1.6186
+  },
+  {
+    "symbol": "MU",
+    "date": "2026-01-29",
+    "close": 435.79,
+    "vwap": 432.3972,
+    "close_vwap_pct": 0.7847
   },
   {
     "symbol": "SNDK",
     "date": "2026-01-29",
-    "close": 533.61,
-    "vwap": 531.9493,
-    "close_vwap_pct": 0.3122
+    "close": 542.07,
+    "vwap": 534.3778,
+    "close_vwap_pct": 1.4395
   },
   {
     "symbol": "AVGO",
     "date": "2026-01-29",
-    "close": 328.275,
-    "vwap": 331.9676,
-    "close_vwap_pct": -1.1123
+    "close": 330.75,
+    "vwap": 329.0478,
+    "close_vwap_pct": 0.5173
   },
   {
     "symbol": "INTC",
     "date": "2026-01-29",
-    "close": 48.545,
-    "vwap": 47.9984,
-    "close_vwap_pct": 1.1389
+    "close": 48.67,
+    "vwap": 48.029,
+    "close_vwap_pct": 1.3347
   },
   {
     "symbol": "QUBT",
     "date": "2026-01-29",
-    "close": 10.77,
-    "vwap": 10.7708,
-    "close_vwap_pct": -0.0078
+    "close": 10.19,
+    "vwap": 10.4881,
+    "close_vwap_pct": -2.8425
   }
 ]
