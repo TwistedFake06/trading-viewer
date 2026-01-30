@@ -3,71 +3,71 @@
     "symbol": "AMD",
     "date": "2026-01-29",
     "close": 252.09,
-    "vwap": 248.8104,
-    "close_vwap_pct": 1.3181
+    "vwap": 248.8075,
+    "close_vwap_pct": 1.3193
   },
   {
     "symbol": "NVDA",
     "date": "2026-01-29",
     "close": 192.43,
-    "vwap": 190.0809,
-    "close_vwap_pct": 1.2359
+    "vwap": 190.0797,
+    "close_vwap_pct": 1.2365
   },
   {
     "symbol": "TSLA",
     "date": "2026-01-29",
     "close": 416.44,
-    "vwap": 422.4104,
-    "close_vwap_pct": -1.4134
+    "vwap": 422.4115,
+    "close_vwap_pct": -1.4137
   },
   {
     "symbol": "AAPL",
     "date": "2026-01-29",
     "close": 258.175,
-    "vwap": 257.2446,
+    "vwap": 257.2445,
     "close_vwap_pct": 0.3617
   },
   {
     "symbol": "SMCI",
     "date": "2026-01-29",
     "close": 30.125,
-    "vwap": 29.7912,
-    "close_vwap_pct": 1.1206
+    "vwap": 29.791,
+    "close_vwap_pct": 1.1213
   },
   {
     "symbol": "MSFT",
     "date": "2026-01-29",
     "close": 433.48,
-    "vwap": 427.0947,
-    "close_vwap_pct": 1.4951
+    "vwap": 427.0935,
+    "close_vwap_pct": 1.4953
   },
   {
     "symbol": "ONDS",
     "date": "2026-01-29",
     "close": 11.27,
-    "vwap": 11.396,
-    "close_vwap_pct": -1.1054
+    "vwap": 11.3959,
+    "close_vwap_pct": -1.1046
   },
   {
     "symbol": "RGTI",
     "date": "2026-01-29",
-    "close": 19.85,
+    "close": 19.836,
     "vwap": 20.0336,
-    "close_vwap_pct": -0.9164
+    "close_vwap_pct": -0.9862
   },
   {
     "symbol": "SNDK",
     "date": "2026-01-29",
     "close": 542.07,
-    "vwap": 534.4582,
-    "close_vwap_pct": 1.4242
+    "vwap": 534.4532,
+    "close_vwap_pct": 1.4252
   },
   {
     "symbol": "AVGO",
     "date": "2026-01-29",
-    "close": 330.76,
-    "vwap": 328.6042,
-    "close_vwap_pct": 0.6561
+    "close": 330.75,
+    "vwap": 329.1992,
+    "close_vwap_pct": 0.4711
   },
   {
     "symbol": "INTC",
@@ -79,8 +79,8 @@
   {
     "symbol": "QUBT",
     "date": "2026-01-29",
-    "close": 10.18,
+    "close": 10.19,
     "vwap": 10.4159,
-    "close_vwap_pct": -2.2648
+    "close_vwap_pct": -2.1685
   }
 ]
