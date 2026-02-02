@@ -51,12 +51,12 @@
   },
   {
     "symbol": "MSFT",
-    "prev_trend": "Bearish",
+    "prev_trend": "Bullish",
     "prev_close": 433.75,
     "price": 430.2900085449219,
     "gap_pct": -0.7976925544848703,
     "opt_score": 3,
-    "total_score": 5,
+    "total_score": 4,
     "scenario": "B"
   },
   {
