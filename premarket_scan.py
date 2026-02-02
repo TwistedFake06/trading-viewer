@@ -123,36 +123,119 @@ def get_premarket_data(symbol):
 
 
 def get_options_score(symbol):
-    """簡易期權流動性評分 (0-3分)"""
+    """
+    期權流動性 + 流量評分：
+    - liq_score: ATM ±5% 成交量 0-3 分（原本邏輯）
+    - flow_score: Volume / OI / Put-Call Ratio 0-4 分
+    - total: liq_score + flow_score
+    回傳 dict，方便後續擴充
+    """
     try:
         tick = yf.Ticker(symbol)
         if not tick.options:
-            return 0
+            return {
+                "liq_score": 0,
+                "flow_score": 0,
+                "total": 0,
+                "pc_ratio": 0.0,
+                "atm_vol": 0,
+                "atm_oi": 0,
+            }
 
         # 最近一個到期日
-        chain = tick.option_chain(tick.options[0])
+        expiry = tick.options[0]
+        chain = tick.option_chain(expiry)
         calls = chain.calls
+        puts = chain.puts
 
         price = tick.fast_info.last_price
         if not price:
-            return 0
+            return {
+                "liq_score": 0,
+                "flow_score": 0,
+                "total": 0,
+                "pc_ratio": 0.0,
+                "atm_vol": 0,
+                "atm_oi": 0,
+            }
 
-        # 只看 ATM 附近
-        calls = calls[
-            (calls["strike"] >= price * 0.95)
-            & (calls["strike"] <= price * 1.05)
-        ]
-        vol = calls["volume"].sum()
+        # 只看 ATM ±5%
+        lower = price * 0.95
+        upper = price * 1.05
+        atm_calls = calls[(calls["strike"] >= lower) & (calls["strike"] <= upper)]
+        atm_puts = puts[(puts["strike"] >= lower) & (puts["strike"] <= upper)]
 
-        if vol > 5000:
-            return 3
-        if vol > 1000:
-            return 2
-        if vol > 100:
-            return 1
-        return 0
+        if atm_calls.empty and atm_puts.empty:
+            return {
+                "liq_score": 0,
+                "flow_score": 0,
+                "total": 0,
+                "pc_ratio": 0.0,
+                "atm_vol": 0,
+                "atm_oi": 0,
+            }
+
+        # --- 基礎流動性分數（沿用舊規則） ---
+        vol_atm = atm_calls["volume"].sum() + atm_puts["volume"].sum()
+        if vol_atm > 5000:
+            liq_score = 3
+        elif vol_atm > 1000:
+            liq_score = 2
+        elif vol_atm > 100:
+            liq_score = 1
+        else:
+            liq_score = 0
+
+        # --- 新增：Volume / OI / Put-Call Ratio ---
+        call_vol = atm_calls["volume"].sum()
+        put_vol = atm_puts["volume"].sum()
+        call_oi = atm_calls["openInterest"].sum() if "openInterest" in atm_calls.columns else 0
+        put_oi = atm_puts["openInterest"].sum() if "openInterest" in atm_puts.columns else 0
+
+        vol_sum = vol_atm
+        oi_sum = call_oi + put_oi
+
+        # Put/Call Volume Ratio
+        pc_ratio = float(put_vol) / float(call_vol if call_vol > 0 else 1)
+
+        flow_score = 0
+
+        # 1) Volume 等級
+        if vol_sum > 10000:
+            flow_score += 2
+        elif vol_sum > 3000:
+            flow_score += 1
+
+        # 2) OI 等級
+        if oi_sum > 20000:
+            flow_score += 2
+        elif oi_sum > 5000:
+            flow_score += 1
+
+        # 3) Put-Call Ratio 情緒（只加 1 分，偏向方向感）
+        if pc_ratio > 1.2 or pc_ratio < 0.8:
+            flow_score += 1
+
+        total = liq_score + flow_score
+
+        return {
+            "liq_score": int(liq_score),
+            "flow_score": int(flow_score),
+            "total": int(total),
+            "pc_ratio": float(pc_ratio),
+            "atm_vol": int(vol_atm),
+            "atm_oi": int(oi_sum),
+        }
+
     except Exception:
-        return 0
+        return {
+            "liq_score": 0,
+            "flow_score": 0,
+            "total": 0,
+            "pc_ratio": 0.0,
+            "atm_vol": 0,
+            "atm_oi": 0,
+        }
 
 
 def decide_scenario(total_score: int) -> str:
@@ -198,8 +281,9 @@ def main():
                     "source": "fallback",
                 }
 
-            # 3. 期權簡易流動性分
-            opt_score = get_options_score(sym)
+            # 3. 期權流動性 + flow 分數
+            opt = get_options_score(sym)
+            opt_score = opt["total"]
 
             # 4. 打分邏輯（你之後可以改成更細）
             total_score = opt_score
@@ -222,7 +306,12 @@ def main():
                 "prev_close": float(pre["prev_close"]),
                 "price": float(pre["price"]),
                 "gap_pct": float(pre["gap_pct"]),
-                "opt_score": int(opt_score),
+                "opt_liq_score": int(opt["liq_score"]),
+                "opt_flow_score": int(opt["flow_score"]),
+                "opt_total_score": int(opt["total"]),
+                "pc_ratio": float(opt["pc_ratio"]),
+                "atm_vol": int(opt["atm_vol"]),
+                "atm_oi": int(opt["atm_oi"]),
                 "total_score": int(total_score),
                 "scenario": scenario,
                 "pre_source": pre.get("source", "unknown"),
@@ -231,9 +320,10 @@ def main():
             results.append(row)
             print(
                 f" - {sym}: prev_trend={row['prev_trend']}, "
-                f"gap={row['gap_pct']:+.2f}%, opt={opt_score}, "
+                f"gap={row['gap_pct']:+.2f}%, opt_total={opt_score}, "
                 f"score={total_score}, scenario={scenario}, "
-                f"src={row['pre_source']}"
+                f"atm_vol={row['atm_vol']}, atm_oi={row['atm_oi']}, "
+                f"pc={row['pc_ratio']:.2f}, src={row['pre_source']}"
             )
 
         except Exception as e:
@@ -259,7 +349,7 @@ def main():
                 f"{r['symbol']:>5}  {r['scenario']:<4}  "
                 f"{r['prev_trend'][:4]:>4}  "
                 f"{r['price']:>6.2f}  {r['gap_pct']:+5.2f}%  "
-                f"{r['opt_score']:>3}   {r['total_score']:>3}"
+                f"{r['opt_total_score']:>3}   {r['total_score']:>3}"
             )
 
         msg = "\n".join(lines)
