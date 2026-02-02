@@ -2,7 +2,7 @@ name: VWAP with yfinance
 
 on:
   schedule:
-    # 每天 11:00 UTC（香港時間 19:00）
+    # 每天 11:00 UTC（香港 19:00 左右），計算前一天 VWAP
     - cron: '0 11 * * *'
   workflow_dispatch:
 
@@ -12,6 +12,7 @@ permissions:
 jobs:
   vwap:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,12 +27,14 @@ jobs:
           pip install -r requirements.txt
 
       - name: Compute VWAP for watchlist
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
-          # 自動使用前一天日期（UTC）
+          # 使用「前一天（UTC）」作為目標日期
           DATE=$(date -u -d '1 day ago' +'%Y-%m-%d')
-          # 在最後面加上 "5m" 參數
+          echo "Target date: $DATE"
           python vwap_yf.py "$DATE" "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT" "5m"
-
 
       - name: Commit VWAP JSON
         run: |
