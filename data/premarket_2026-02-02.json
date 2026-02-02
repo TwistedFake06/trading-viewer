@@ -51,12 +51,12 @@
   },
   {
     "symbol": "MSFT",
-    "prev_trend": "Neutral",
+    "prev_trend": "Bearish",
     "prev_close": 433.75,
     "price": 430.2900085449219,
     "gap_pct": -0.7976925544848703,
     "opt_score": 3,
-    "total_score": 4,
+    "total_score": 5,
     "scenario": "B"
   },
   {
@@ -101,7 +101,7 @@
   },
   {
     "symbol": "AVGO",
-    "prev_trend": "Bearish",
+    "prev_trend": "Neutral",
     "prev_close": 328.7434,
     "price": 331.29998779296875,
     "gap_pct": 0.7776849034744854,
