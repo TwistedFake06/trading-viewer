@@ -3,130 +3,143 @@
     "symbol": "AMD",
     "prev_trend": "Bearish",
     "prev_close": 236.755,
-    "price": 236.72999572753906,
-    "gap_pct": -0.010561243674234104,
+    "price": 233.83,
+    "gap_pct": -1.235454372663717,
     "opt_score": 3,
-    "total_score": 4,
-    "scenario": "B"
+    "total_score": 5,
+    "scenario": "B",
+    "pre_source": "preMarketPrice"
   },
   {
     "symbol": "NVDA",
-    "prev_trend": "Bearish",
+    "prev_trend": "Neutral",
     "prev_close": 190.25,
-    "price": 191.1300048828125,
-    "gap_pct": 0.4625518437910644,
+    "price": 188.99,
+    "gap_pct": -0.6622864651773933,
     "opt_score": 3,
-    "total_score": 3,
-    "scenario": "B"
+    "total_score": 4,
+    "scenario": "B",
+    "pre_source": "preMarketPrice"
   },
   {
     "symbol": "TSLA",
     "prev_trend": "Bearish",
     "prev_close": 429.63,
-    "price": 430.4100036621094,
-    "gap_pct": 0.1815524200147521,
+    "price": 423.43,
+    "gap_pct": -1.443102204222235,
     "opt_score": 3,
-    "total_score": 3,
-    "scenario": "B"
+    "total_score": 5,
+    "scenario": "B",
+    "pre_source": "preMarketPrice"
   },
   {
     "symbol": "AAPL",
     "prev_trend": "Bullish",
     "prev_close": 258.99,
-    "price": 259.4800109863281,
-    "gap_pct": 0.18920073606244098,
+    "price": 257.47,
+    "gap_pct": -0.5868952469207235,
     "opt_score": 3,
     "total_score": 4,
-    "scenario": "B"
+    "scenario": "B",
+    "pre_source": "preMarketPrice"
   },
   {
     "symbol": "SMCI",
     "prev_trend": "Bearish",
     "prev_close": 29.18,
-    "price": 29.110000610351562,
-    "gap_pct": -0.23988824416873616,
+    "price": 29.02,
+    "gap_pct": -0.5483207676490752,
     "opt_score": 3,
-    "total_score": 4,
-    "scenario": "B"
+    "total_score": 5,
+    "scenario": "B",
+    "pre_source": "preMarketPrice"
   },
   {
     "symbol": "MSFT",
-    "prev_trend": "Bearish",
+    "prev_trend": "Neutral",
     "prev_close": 428.8484,
-    "price": 430.2900085449219,
-    "gap_pct": 0.3361580793869928,
+    "price": 428.16,
+    "gap_pct": -0.16052292605032487,
     "opt_score": 3,
     "total_score": 3,
-    "scenario": "B"
+    "scenario": "B",
+    "pre_source": "preMarketPrice"
   },
   {
     "symbol": "ONDS",
     "prev_trend": "Bearish",
     "prev_close": 10.42,
-    "price": 10.359999656677246,
-    "gap_pct": -0.5758190338076185,
+    "price": 10.71,
+    "gap_pct": 2.783109404990412,
     "opt_score": 2,
     "total_score": 4,
-    "scenario": "B"
+    "scenario": "B",
+    "pre_source": "preMarketPrice"
   },
   {
     "symbol": "RGTI",
     "prev_trend": "Bearish",
     "prev_close": 18.259,
-    "price": 18.170000076293945,
-    "gap_pct": -0.4874304381732572,
+    "price": 18.19,
+    "gap_pct": -0.37789583219233835,
     "opt_score": 2,
     "total_score": 3,
-    "scenario": "B"
+    "scenario": "B",
+    "pre_source": "preMarketPrice"
   },
   {
     "symbol": "MU",
     "prev_trend": "Bearish",
     "prev_close": 422.01,
-    "price": 414.8800048828125,
-    "gap_pct": -1.6895322663414352,
+    "price": 417.25,
+    "gap_pct": -1.1279353569820598,
     "opt_score": 3,
-    "total_score": 6,
-    "scenario": "A"
+    "total_score": 5,
+    "scenario": "B",
+    "pre_source": "preMarketPrice"
   },
   {
     "symbol": "SNDK",
     "prev_trend": "Bearish",
     "prev_close": 593.0,
-    "price": 576.25,
-    "gap_pct": -2.824620573355818,
+    "price": 588.21,
+    "gap_pct": -0.8077571669477174,
     "opt_score": 3,
-    "total_score": 6,
-    "scenario": "A"
+    "total_score": 5,
+    "scenario": "B",
+    "pre_source": "preMarketPrice"
   },
   {
     "symbol": "AVGO",
-    "prev_trend": "Bearish",
+    "prev_trend": "Neutral",
     "prev_close": 331.1,
-    "price": 331.29998779296875,
-    "gap_pct": 0.060401024756486635,
+    "price": 328.29,
+    "gap_pct": -0.8486861975234075,
     "opt_score": 3,
-    "total_score": 3,
-    "scenario": "B"
+    "total_score": 4,
+    "scenario": "B",
+    "pre_source": "preMarketPrice"
   },
   {
     "symbol": "INTC",
     "prev_trend": "Bearish",
     "prev_close": 46.37,
-    "price": 46.470001220703125,
-    "gap_pct": 0.2156593071018494,
+    "price": 46.02,
+    "gap_pct": -0.754798361009261,
     "opt_score": 3,
-    "total_score": 3,
-    "scenario": "B"
+    "total_score": 5,
+    "scenario": "B",
+    "pre_source": "preMarketPrice"
   },
   {
     "symbol": "MUR",
     "prev_trend": "Bullish",
     "prev_close": 30.44,
-    "price": 30.09000015258789,
-    "gap_pct": -1.1498023896587077,
+    "price": 29.51,
+    "gap_pct": -3.055190538764782,
     "opt_score": 0,
-    "total_score": 1,
-    "scenario": "C"
+    "total_score": 2,
+    "scenario": "C",
+    "pre_source": "preMarketPrice"
   }
 ]
