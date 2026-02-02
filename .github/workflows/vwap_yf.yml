@@ -40,6 +40,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           git add data/ || echo "no data dir"
           git commit -m "Update VWAP data (watchlist)" || echo "No changes to commit"
-          git push
+
+          # 與遠端 main 對齊，避免 non-fast-forward
+          git fetch origin main
+          git rebase origin/main || echo "rebase failed or nothing to rebase"
+
+          git push origin HEAD:main || echo "push failed (maybe no new commits)"
