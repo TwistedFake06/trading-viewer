@@ -1,0 +1,132 @@
+[
+  {
+    "symbol": "AMD",
+    "prev_trend": "Bearish",
+    "prev_close": 250.4,
+    "price": 236.72999572753906,
+    "gap_pct": -5.45926688197322,
+    "opt_score": 3,
+    "total_score": 6,
+    "scenario": "A"
+  },
+  {
+    "symbol": "NVDA",
+    "prev_trend": "Neutral",
+    "prev_close": 191.325,
+    "price": 191.1300048828125,
+    "gap_pct": -0.10191826326276683,
+    "opt_score": 3,
+    "total_score": 3,
+    "scenario": "B"
+  },
+  {
+    "symbol": "TSLA",
+    "prev_trend": "Bearish",
+    "prev_close": 430.15,
+    "price": 430.4100036621094,
+    "gap_pct": 0.060444882508287286,
+    "opt_score": 3,
+    "total_score": 3,
+    "scenario": "B"
+  },
+  {
+    "symbol": "AAPL",
+    "prev_trend": "Bullish",
+    "prev_close": 259.7101,
+    "price": 259.4800109863281,
+    "gap_pct": -0.08859455742071112,
+    "opt_score": 3,
+    "total_score": 3,
+    "scenario": "B"
+  },
+  {
+    "symbol": "SMCI",
+    "prev_trend": "Bearish",
+    "prev_close": 29.93,
+    "price": 29.110000610351562,
+    "gap_pct": -2.7397239881337696,
+    "opt_score": 3,
+    "total_score": 6,
+    "scenario": "A"
+  },
+  {
+    "symbol": "MSFT",
+    "prev_trend": "Neutral",
+    "prev_close": 433.75,
+    "price": 430.2900085449219,
+    "gap_pct": -0.7976925544848703,
+    "opt_score": 3,
+    "total_score": 4,
+    "scenario": "B"
+  },
+  {
+    "symbol": "ONDS",
+    "prev_trend": "Bearish",
+    "prev_close": 11.4495,
+    "price": 10.359999656677246,
+    "gap_pct": -9.515702374101528,
+    "opt_score": 2,
+    "total_score": 5,
+    "scenario": "B"
+  },
+  {
+    "symbol": "RGTI",
+    "prev_trend": "Bearish",
+    "prev_close": 19.87,
+    "price": 18.170000076293945,
+    "gap_pct": -8.555611090619303,
+    "opt_score": 2,
+    "total_score": 5,
+    "scenario": "B"
+  },
+  {
+    "symbol": "MU",
+    "prev_trend": "Bearish",
+    "prev_close": 449.43,
+    "price": 414.8800048828125,
+    "gap_pct": -7.687514210708565,
+    "opt_score": 3,
+    "total_score": 6,
+    "scenario": "A"
+  },
+  {
+    "symbol": "SNDK",
+    "prev_trend": "Bearish",
+    "prev_close": 615.9,
+    "price": 576.25,
+    "gap_pct": -6.4377333982789375,
+    "opt_score": 3,
+    "total_score": 6,
+    "scenario": "A"
+  },
+  {
+    "symbol": "AVGO",
+    "prev_trend": "Bearish",
+    "prev_close": 328.7434,
+    "price": 331.29998779296875,
+    "gap_pct": 0.7776849034744854,
+    "opt_score": 3,
+    "total_score": 4,
+    "scenario": "B"
+  },
+  {
+    "symbol": "INTC",
+    "prev_trend": "Bearish",
+    "prev_close": 48.401,
+    "price": 46.470001220703125,
+    "gap_pct": -3.9895844699425185,
+    "opt_score": 3,
+    "total_score": 6,
+    "scenario": "A"
+  },
+  {
+    "symbol": "MUR",
+    "prev_trend": "Bullish",
+    "prev_close": 31.45,
+    "price": 30.09000015258789,
+    "gap_pct": -4.3243238391481995,
+    "opt_score": 0,
+    "total_score": 2,
+    "scenario": "C"
+  }
+]
