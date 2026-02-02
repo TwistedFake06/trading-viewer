@@ -80,23 +80,43 @@ def get_last_trading_day_vwap(symbol, interval="5m"):
 
 
 def get_premarket_data(symbol):
-    """抓盤前價格（使用 yfinance.fast_info，大致近似）"""
+    """抓盤前價格：優先用 preMarketPrice，否則退回 fast_info.last_price"""
     try:
         tick = yf.Ticker(symbol)
-        info = tick.fast_info
 
-        price = info.last_price
-        prev_close = info.previous_close
+        # 先試著從完整 info 抓 preMarketPrice（可能會比較慢）
+        pre_price = None
+        try:
+            info_full = tick.info
+            pre_price = info_full.get("preMarketPrice")
+        except Exception:
+            pre_price = None
 
-        if not price or not prev_close:
+        fast = tick.fast_info
+        last_price = fast.last_price
+        prev_close = fast.previous_close
+
+        if not prev_close:
             return None
+
+        # 判斷實際使用哪一個價格
+        if pre_price is not None and pre_price > 0:
+            price = float(pre_price)
+            source = "preMarketPrice"
+        else:
+            # 退回最新價格（可能是盤中/盤後/盤前）
+            if not last_price:
+                return None
+            price = float(last_price)
+            source = "last_price"
 
         change_pct = (price - prev_close) / prev_close * 100.0
 
         return {
-            "price": float(price),
+            "price": price,
             "prev_close": float(prev_close),
             "gap_pct": float(change_pct),
+            "source": source,  # 額外標註來源
         }
     except Exception:
         return None
@@ -175,6 +195,7 @@ def main():
                     "price": prev["prev_close"],
                     "prev_close": prev["prev_close"],
                     "gap_pct": 0.0,
+                    "source": "fallback",
                 }
 
             # 3. 期權簡易流動性分
@@ -204,13 +225,15 @@ def main():
                 "opt_score": int(opt_score),
                 "total_score": int(total_score),
                 "scenario": scenario,
+                "pre_source": pre.get("source", "unknown"),
             }
 
             results.append(row)
             print(
                 f" - {sym}: prev_trend={row['prev_trend']}, "
                 f"gap={row['gap_pct']:+.2f}%, opt={opt_score}, "
-                f"score={total_score}, scenario={scenario}"
+                f"score={total_score}, scenario={scenario}, "
+                f"src={row['pre_source']}"
             )
 
         except Exception as e:
@@ -225,7 +248,7 @@ def main():
         json.dump(results, f, ensure_ascii=False, indent=2)
     print(f"Saved premarket scan to {out_path}")
 
-    # 發送 Telegram 摘要（Top 5）
+    # 發送 Telegram 摘要（全部 symbols，依 total_score 排序）
     if results:
         sorted_res = sorted(results, key=lambda x: x["total_score"], reverse=True)
 
