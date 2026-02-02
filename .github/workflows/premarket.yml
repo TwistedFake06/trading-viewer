@@ -2,26 +2,41 @@ name: Premarket Scan
 
 on:
   schedule:
-    # 香港時間 20:00 (UTC 12:00)
-    - cron: '0 12 * * 1-5'
+    # 每天 13:00 UTC（香港 21:00 左右，開盤前約半小時）
+    - cron: '0 13 * * *'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  scan:
+  premarket:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install yfinance pandas lxml
-      - run: python premarket_scan.py "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT"
-      - run: |
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run premarket scan
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: |
+          python premarket_scan.py "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,MUR"
+
+      - name: Commit Premarket JSON
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/premarket_*.json
-          git commit -m "Update Premarket Data" || echo "No changes"
+          git add data/ || echo "no data dir"
+          git commit -m "Update premarket data" || echo "No changes to commit"
           git push
