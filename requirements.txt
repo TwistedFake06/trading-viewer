@@ -1,4 +1,4 @@
 yfinance
 pandas
 lxml
-telegram_utils.py
+requests
