@@ -228,11 +228,10 @@ def main():
     # 發送 Telegram 摘要（Top 5）
     if results:
         sorted_res = sorted(results, key=lambda x: x["total_score"], reverse=True)
-        top = sorted_res[:5]
 
         lines = [f"*Premarket Scan {today}*"]
         lines.append("`Ticker  Scen  Prev  Px   Δ%    Opt  Score`")
-        for r in top:
+        for r in sorted_res:
             lines.append(
                 f"{r['symbol']:>5}  {r['scenario']:<4}  "
                 f"{r['prev_trend'][:4]:>4}  "
