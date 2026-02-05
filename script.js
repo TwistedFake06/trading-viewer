@@ -1,7 +1,7 @@
 // -------------------- Debug Helper --------------------
 function logDebug(message, obj) {
   const debugEl = document.getElementById("debug");
-  const time = new Date().toISOString().split('T')[1].split('.')[0];
+  const time = new Date().toISOString().split("T")[1].split(".")[0];
   let line = "[" + time + "] " + message;
   if (obj !== undefined) {
     try {
@@ -52,16 +52,17 @@ function renderVwapResult(dateStr, rows) {
   const sorted = rows.slice().sort((a, b) => a.symbol.localeCompare(b.symbol));
 
   let html = `<h3>📉 盤後 VWAP 分析 (${dateStr})</h3>`;
-  html += "<table><thead><tr><th>Ticker</th><th>收盤</th><th>VWAP</th><th>差距%</th><th>狀態</th></tr></thead><tbody>";
+  html +=
+    "<table><thead><tr><th>Ticker</th><th>收盤</th><th>VWAP</th><th>差距%</th><th>狀態</th></tr></thead><tbody>";
 
-  sorted.forEach(row => {
+  sorted.forEach((row) => {
     const pct = row.close_vwap_pct;
-    const styleClass = pct > 0 ? "trend-up" : (pct < 0 ? "trend-down" : "");
-    
-    // 建立連到 chart.html 的連結
+    const styleClass = pct > 0 ? "trend-up" : pct < 0 ? "trend-down" : "";
+
+    // 建立連到 intraday.html 的連結，自動載入 intraday JSON
     // 注意：row.date 確保連結到該筆資料實際存在的日期
-    const symbolLink = `<a href="chart.html?symbol=${row.symbol}&date=${row.date}" target="_blank" style="text-decoration:none; color:#007bff; font-weight:bold;">${row.symbol}</a>`;
-    
+    const symbolLink = `<a href="intraday.html?symbol=${row.symbol}&date=${row.date}" target="_blank" style="text-decoration:none; color:#007bff; font-weight:bold;">${row.symbol}</a>`;
+
     html += `<tr>
       <td>${symbolLink}</td>
       <td>${row.close.toFixed(2)}</td>
@@ -74,13 +75,13 @@ function renderVwapResult(dateStr, rows) {
 
   // Markdown 輸出區塊
   let md = `### VWAP 盤後摘要 (${dateStr})\n\n`;
-  sorted.forEach(row => {
+  sorted.forEach((row) => {
     md += `- **${row.symbol}**: 收 ${row.close} (VWAP ${row.vwap}) | ${row.close_vwap_pct}% (${decideScenario(row.close_vwap_pct)})\n`;
   });
 
   html += `<p style="font-size:12px;color:#666;">Markdown (可複製):</p>
            <pre style="background:#eee;padding:10px;border-radius:4px;overflow:auto;">${md}</pre>`;
-  
+
   resultDiv.innerHTML = html;
   resultDiv.style.display = "block";
 }
@@ -92,17 +93,18 @@ function renderPremarketResult(dateStr, rows) {
   const sorted = rows.slice().sort((a, b) => b.total_score - a.total_score);
 
   let html = `<h3>🚀 盤前掃描 (${dateStr})</h3>`;
-  html += "<table><thead><tr><th>Ticker</th><th>昨勢</th><th>盤前價</th><th>漲跌%</th><th>期權分</th><th>總分</th></tr></thead><tbody>";
+  html +=
+    "<table><thead><tr><th>Ticker</th><th>昨勢</th><th>盤前價</th><th>漲跌%</th><th>期權分</th><th>總分</th></tr></thead><tbody>";
 
-  sorted.forEach(row => {
-    const changeClass = row.change_pct > 0 ? "trend-up" : (row.change_pct < 0 ? "trend-down" : "");
+  sorted.forEach((row) => {
+    const changeClass =
+      row.change_pct > 0 ? "trend-up" : row.change_pct < 0 ? "trend-down" : "";
     const scoreClass = row.total_score >= 4 ? "score-high" : "";
-    
-    // 盤前掃描通常還沒有當日的 Intraday 圖 (因為還沒收盤/剛開盤)
-    // 但如果有 premarket 數據，或許 chart.html 也能顯示部分
-    // 這裡一樣加上連結，使用者點進去若有檔就能看
-    const symbolLink = `<a href="chart.html?symbol=${row.symbol}&date=${dateStr}" target="_blank" style="text-decoration:none; color:#007bff; font-weight:bold;">${row.symbol}</a>`;
-    
+
+    // 盤前掃描：連結到 intraday 圖表
+    // 使用者點進去若有檔就能看到日內圖表
+    const symbolLink = `<a href="intraday.html?symbol=${row.symbol}&date=${dateStr}" target="_blank" style="text-decoration:none; color:#007bff; font-weight:bold;">${row.symbol}</a>`;
+
     html += `<tr>
       <td>${symbolLink}</td>
       <td>${row.prev_trend}</td>
@@ -116,7 +118,7 @@ function renderPremarketResult(dateStr, rows) {
 
   // Markdown 輸出區塊 (Top 5)
   let md = `### 盤前重點掃描 (${dateStr})\n\n`;
-  sorted.slice(0, 5).forEach(row => {
+  sorted.slice(0, 5).forEach((row) => {
     const icon = row.change_pct > 0 ? "📈" : "📉";
     md += `- **${row.symbol}**: ${icon} ${row.change_pct.toFixed(2)}% | Score: ${row.total_score}\n`;
   });
@@ -146,7 +148,7 @@ document.getElementById("runBtn").addEventListener("click", async function () {
   }
 
   try {
-    if (mode === 'vwap') {
+    if (mode === "vwap") {
       const rows = await loadVwapJson(dateStr);
       renderVwapResult(dateStr, rows);
     } else {
