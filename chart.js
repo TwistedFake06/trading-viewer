@@ -63,6 +63,7 @@ window.addEventListener("DOMContentLoaded", function () {
         secondsVisible: false,
         rightOffset: 5,
         lockVisibleTimeRangeOnResize: true,
+        timeZone: "Asia/Hong_Kong",
       },
       rightPriceScale: {
         borderColor: "#2B2B43",
