@@ -67,8 +67,9 @@ window.addEventListener("DOMContentLoaded", function () {
       },
     });
 
-    // 1. Candlestick Series
-    const candleSeries = chart.addCandlestickSeries({
+    // 1. Candlestick Series (v5.x API)
+    const candleSeries = chart.addSeries({
+      type: "Candlestick",
       upColor: "#26a69a",
       downColor: "#ef5350",
       borderVisible: false,
@@ -86,8 +87,9 @@ window.addEventListener("DOMContentLoaded", function () {
       })),
     );
 
-    // 2. VWAP Line Series
-    const vwapSeries = chart.addLineSeries({
+    // 2. VWAP Line Series (v5.x API)
+    const vwapSeries = chart.addSeries({
+      type: "Line",
       color: "#ff9800",
       lineWidth: 2,
       title: "VWAP",
@@ -100,8 +102,9 @@ window.addEventListener("DOMContentLoaded", function () {
       })),
     );
 
-    // 3. Volume Histogram (Overlay)
-    const volumeSeries = chart.addHistogramSeries({
+    // 3. Volume Histogram (Overlay) (v5.x API)
+    const volumeSeries = chart.addSeries({
+      type: "Histogram",
       color: "#26a69a",
       priceFormat: { type: "volume" },
       priceScaleId: "", // 設為空字串，讓它疊加在主圖底部
