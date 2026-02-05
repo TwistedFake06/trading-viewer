@@ -61,9 +61,27 @@ window.addEventListener("DOMContentLoaded", function () {
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
+        rightOffset: 5,
+        lockVisibleTimeRangeOnResize: true,
       },
       rightPriceScale: {
         borderColor: "#2B2B43",
+        autoScale: true,
+        scaleMargins: {
+          top: 0.1,
+          bottom: 0.2,
+        },
+      },
+      handleScroll: {
+        mouseWheel: false,
+        pressedMouseMove: false,
+        horzTouchDrag: false,
+        vertTouchDrag: false,
+      },
+      handleScale: {
+        axisPressedMouseMove: false,
+        mouseWheel: false,
+        pinch: false,
       },
     });
 
