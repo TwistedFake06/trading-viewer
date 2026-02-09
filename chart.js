@@ -30,7 +30,7 @@ async function initChart() {
   const errorEl = document.getElementById("error-msg");
 
   try {
-    const path = `data/intraday/intraday_${symbol}_${date}.json`;
+    const path = `data/intraday/intraday_${symbol}.json`;
     const resp = await fetch(path);
     if (!resp.ok) throw new Error(`資料不存在: ${path} (${resp.status})`);
 

@@ -2,16 +2,15 @@ name: Daily Intraday VWAP Updater (HK 9:00 next day)
 
 on:
   schedule:
-    # UTC 01:00 = 香港時間次日 09:00
-    - cron: '0 1 * * 1-5'
+    - cron: '0 1 * * 1-5'  # UTC 01:00 = HK 09:00 次日
   workflow_dispatch:
     inputs:
       custom_date:
-        description: '指定要抓取的日期 (YYYY-MM-DD)，留空則用昨天'
+        description: '指定日期 (YYYY-MM-DD)，留空用昨天'
         required: false
         default: 'yesterday'
       symbols:
-        description: '股票清單 (用逗號分隔)'
+        description: '股票清單 (逗號分隔)'
         required: false
         default: 'AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT'
 
@@ -41,16 +40,14 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID:   ${{ secrets.TG_CHAT_ID }}
         run: |
-          # 使用 workflow_dispatch inputs，如果沒指定就用 yesterday
           INPUT_DATE="${{ inputs.custom_date || 'yesterday' }}"
           INPUT_SYMBOLS="${{ inputs.symbols || 'AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT' }}"
-
           python vwap_yf.py "$INPUT_DATE" "$INPUT_SYMBOLS" --interval "5m" --max-back 7
 
       - name: Commit and push updated JSON files
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
-          git add data/ || echo "No changes in data/"
-          git diff --cached --quiet || git commit -m "Auto update intraday VWAP JSON - $(date -u +'%Y-%m-%d')"
-          git push origin HEAD:main || echo "No push needed or push failed"
+          git add data/ || echo "No changes"
+          git diff --cached --quiet || git commit -m "Auto update cumulative intraday JSON - $(date -u +'%Y-%m-%d')"
+          git push origin HEAD:main || echo "No push needed"

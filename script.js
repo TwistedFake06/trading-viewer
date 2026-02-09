@@ -1,4 +1,4 @@
-// script.js - 完整版（包含觸發 GitHub Actions 功能）
+// script.js - 完整版（2026-02-09 最終修正）
 
 // 表格排序功能
 function addTableSorting(tableId) {
@@ -50,7 +50,8 @@ function renderVwapResult(dateStr, rows) {
   rows.forEach((row) => {
     const pct = Number(row.close_vwap_pct || 0);
     const cls = pct > 0 ? "trend-up" : pct < 0 ? "trend-down" : "";
-    const link = `<a href="chart.html?symbol=${row.symbol}&date=${row.date || dateStr}" target="_blank">${row.symbol}</a>`;
+    // 這裡就是你問的 ${row.symbol} 連結定義（可改成只傳 symbol）
+    const link = `<a href="chart.html?symbol=${row.symbol}" target="_blank">${row.symbol}</a>`;  // 已改成只傳 symbol
 
     html += `<tr>
       <td>${link}</td>
@@ -80,11 +81,12 @@ function renderPremarketResult(dateStr, rows) {
     const changeCls = pct > 0 ? "trend-up" : pct < 0 ? "trend-down" : "";
     const scoreCls = Number(row.total_score || 0) >= 4 ? "score-high" : "";
 
-    const link = `<a href="chart.html?symbol=${row.symbol}&date=${dateStr}" target="_blank">${row.symbol}</a>`;
+    // 這裡也是 ${row.symbol} 的連結定義（已改成只傳 symbol）
+    const link = `<a href="chart.html?symbol=${row.symbol}" target="_blank">${row.symbol}</a>`;  // 已改成只傳 symbol
 
     html += `<tr>
       <td>${link}</td>
-      <td>${row.prev_trend || "N/A"}</td>
+      <td>${row.prev_trend || 'N/A'}</td>
       <td>${Number(row.price || 0).toFixed(2)}</td>
       <td class="${changeCls}">${pct.toFixed(2)}%</td>
       <td>${row.opt_total_score || 0}</td>
@@ -104,9 +106,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!runBtn) return console.error("Missing #runBtn");
 
   runBtn.addEventListener("click", async () => {
-    const dateEl = document.getElementById("date");
-    const modeEl = document.getElementById("modeSelect");
-    const errorEl = document.getElementById("error");
+    const dateEl   = document.getElementById("date");
+    const modeEl   = document.getElementById("modeSelect");
+    const errorEl  = document.getElementById("error");
     const resultEl = document.getElementById("result");
 
     if (!dateEl || !modeEl || !errorEl || !resultEl) {
@@ -129,10 +131,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const url =
-        mode === "vwap"
-          ? `data/vwap_${dateStr}.json`
-          : `data/premarket_${dateStr}.json`;
+      const url = mode === "vwap"
+        ? `data/vwap_${dateStr}.json`
+        : `data/premarket_${dateStr}.json`;
 
       const resp = await fetch(url);
       if (!resp.ok) throw new Error(`找不到資料 (${resp.status}) - ${url}`);
@@ -152,38 +153,54 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // 預設今天日期
-  document.getElementById("date").value = new Date()
-    .toISOString()
-    .split("T")[0];
+  document.getElementById("date").value = new Date().toISOString().split("T")[0];
 
-  // 新增：觸發 GitHub Actions 抓取指定日期
+  // 觸發 GitHub Actions 抓取指定日期（防呆加強版）
   const triggerBtn = document.getElementById("triggerActionBtn");
   if (triggerBtn) {
+    console.log("[DEBUG] triggerActionBtn 已找到");
     triggerBtn.addEventListener("click", () => {
       const dateEl = document.getElementById("triggerDate");
       const feedback = document.getElementById("triggerFeedback");
 
+      console.log("[DEBUG] 觸發按鈕被點擊");
+
+      if (!dateEl) {
+        console.error("[ERROR] 找不到 #triggerDate");
+        if (feedback) {
+          feedback.textContent = "頁面錯誤：找不到日期輸入框";
+          feedback.style.color = "#dc3545";
+        }
+        return;
+      }
+
       if (!dateEl.value) {
-        feedback.textContent = "請先選擇日期";
-        feedback.style.color = "#dc3545";
-        setTimeout(() => (feedback.textContent = ""), 3000);
+        console.warn("[WARN] 未選擇日期");
+        if (feedback) {
+          feedback.textContent = "請先選擇日期";
+          feedback.style.color = "#dc3545";
+          setTimeout(() => feedback.textContent = "", 3000);
+        }
         return;
       }
 
       const date = dateEl.value; // YYYY-MM-DD
-      const repo = "TwistedFake06/trading-viewer"; // 你的 repo 名稱
-      const workflow = "vwap_yf.yml"; // workflow 檔名
+      const repo = "TwistedFake06/trading-viewer"; // 請確認這是你的 repo 名稱
+      const workflow = "vwap_yf.yml";
 
-      // 產生帶有 custom_date 參數的 Actions 頁面連結
       const url = `https://github.com/${repo}/actions/workflows/${workflow}?query=workflow%3A${workflow}+custom_date%3A${date}`;
 
-      feedback.textContent = "已開啟 GitHub 頁面，請點 Run workflow 開始抓取";
-      feedback.style.color = "#28a745";
+      console.log("[DEBUG] 開啟連結:", url);
 
-      // 開新分頁
-      window.open(url, "_blank");
+      if (feedback) {
+        feedback.textContent = "已開啟 GitHub 頁面，請點 Run workflow 開始抓取";
+        feedback.style.color = "#28a745";
+        setTimeout(() => feedback.textContent = "", 8000);
+      }
 
-      setTimeout(() => (feedback.textContent = ""), 8000);
+      window.open(url, '_blank');
     });
+  } else {
+    console.error("[ERROR] 找不到 #triggerActionBtn 按鈕，請檢查 HTML id 是否正確");
   }
 });
