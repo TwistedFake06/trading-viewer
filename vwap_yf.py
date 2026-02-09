@@ -1,5 +1,4 @@
-# vwap_yf.py
-# 最終完整版：累加到單一 JSON、處理 MultiIndex、交易日檢查、回溯
+# vwap_yf.py - 最終版：如果該天已存在於累加 JSON，就完全跳過抓取
 
 import argparse
 import json
@@ -9,23 +8,17 @@ from datetime import datetime, timedelta
 import pandas as pd
 import yfinance as yf
 
-# 如果有 utils.py 放 Telegram 函數，可 import
-# from utils import send_telegram_message
-
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
 def is_trading_day(symbol: str, date_str: str) -> bool:
-    """檢查指定日期是否為美股交易日（有 volume > 0 且有 Close）"""
     try:
         start = date_str
         end = (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
         df = yf.download(symbol, start=start, end=end, interval="1d", progress=False)
 
         if df.empty:
-            logging.debug(f"{date_str} 無資料 (empty)")
             return False
 
-        # 處理 MultiIndex
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
 
@@ -45,23 +38,44 @@ def is_trading_day(symbol: str, date_str: str) -> bool:
         return False
 
 
-def json_exists(symbol: str, date_str: str) -> bool:
-    # 檢查單日 JSON 是否存在（舊邏輯，可保留或移除）
-    path = f"data/intraday/intraday_{symbol}_{date_str}.json"
-    if os.path.exists(path):
-        logging.info(f"單日 JSON 已存在: {path}")
-        return True
-    return False
+def day_exists_in_cumulative_json(symbol: str, date_str: str) -> bool:
+    """檢查累加 JSON 是否已包含該天的資料（根據 time 範圍判斷）"""
+    path = f"data/intraday/intraday_{symbol}.json"
+    if not os.path.exists(path):
+        return False
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if not data:
+            return False
+
+        # 該天開始與結束的 Unix timestamp
+        day_start = int(datetime.strptime(date_str, "%Y-%m-%d").timestamp())
+        day_end = day_start + 86400 - 1  # 次日 00:00 - 1 秒
+
+        # 檢查是否有任何資料的 time 在該天範圍內
+        for entry in data:
+            t = entry.get("time")
+            if t and day_start <= t <= day_end:
+                logging.info(f"{date_str} 已存在於累加 JSON，跳過抓取 ({symbol})")
+                return True
+
+        return False
+
+    except Exception as e:
+        logging.warning(f"檢查累加 JSON 失敗 {path}: {e}")
+        return False
 
 
 def append_or_merge_intraday_json(symbol: str, date_str: str, df: pd.DataFrame) -> str:
-    """將新一天資料累加到統一的 intraday_{symbol}.json"""
     try:
         df = df.copy()
 
-        # 處理欄位
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
+
         df.columns = [str(c).lower().strip() for c in df.columns]
 
         if "adj close" in df.columns and "close" not in df.columns:
@@ -71,16 +85,14 @@ def append_or_merge_intraday_json(symbol: str, date_str: str, df: pd.DataFrame) 
         required = ["open", "high", "low", "close", "volume"]
         missing = [col for col in required if col not in df.columns]
         if missing:
-            raise KeyError(f"缺少欄位: {missing}. 可用: {list(df.columns)}")
+            raise KeyError(f"缺少欄位: {missing}")
 
-        # 計算 VWAP
         df["tp"] = (df["high"] + df["low"] + df["close"]) / 3
         df["pv"] = df["tp"] * df["volume"]
         df["cum_pv"] = df["pv"].cumsum()
         df["cum_vol"] = df["volume"].cumsum()
         df["vwap"] = df["cum_pv"] / df["cum_vol"].replace(0, 1)
 
-        # 新資料轉 dict list
         new_data = []
         for idx, row in df.iterrows():
             ts = int(idx.timestamp())
@@ -94,20 +106,14 @@ def append_or_merge_intraday_json(symbol: str, date_str: str, df: pd.DataFrame) 
                 "vwap": round(float(row["vwap"]), 2),
             })
 
-        # 目標檔案：統一累加檔
-        os.makedirs("data/intraday", exist_ok=True)
         path = f"data/intraday/intraday_{symbol}.json"
 
-        # 讀舊資料
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 existing_data = json.load(f)
-            logging.info(f"讀取舊資料: {path} ({len(existing_data)} 筆)")
         else:
             existing_data = []
-            logging.info(f"建立新累加檔: {path}")
 
-        # 合併 + 去重（以 time 為 key）
         time_set = {d["time"] for d in existing_data}
         merged_data = existing_data[:]
         added_count = 0
@@ -117,19 +123,14 @@ def append_or_merge_intraday_json(symbol: str, date_str: str, df: pd.DataFrame) 
                 time_set.add(d["time"])
                 added_count += 1
 
-        # 按 time 排序
         merged_data.sort(key=lambda x: x["time"])
 
-        # 寫回
         with open(path, "w", encoding="utf-8") as f:
             json.dump(merged_data, f, indent=2)
-        logging.info(f"累加完成: {path} (新增 {added_count} 筆，總計 {len(merged_data)} 筆)")
 
+        logging.info(f"累加完成: {path} (新增 {added_count} 筆，總計 {len(merged_data)} 筆)")
         return path
 
-    except KeyError as ke:
-        logging.error(f"欄位錯誤 {symbol} {date_str}: {ke}")
-        return ""
     except Exception as e:
         logging.error(f"合併/儲存失敗 {symbol} {date_str}: {e}")
         return ""
@@ -157,8 +158,11 @@ def process_symbol(symbol: str, target_date_input: str, interval: str = "5m", ma
             logging.info(f"{check_date_str} 非交易日，跳過 ({symbol})")
             continue
 
-        # 因為我們現在累加到統一檔案，不再檢查單日 JSON
-        # 直接抓取並累加
+        # 新增檢查：如果該天已存在於累加 JSON，就完全跳過抓取
+        if day_exists_in_cumulative_json(symbol, check_date_str):
+            found = True
+            break
+
         try:
             start = check_date_str
             end = (check_date + timedelta(days=1)).strftime("%Y-%m-%d")
@@ -198,7 +202,7 @@ def main():
         process_symbol(sym, args.date, args.interval, args.max_back)
 
     msg = f"VWAP 更新完成\n目標日期: {args.date} (及回溯)\n符號: {', '.join(symbols)}"
-    # send_telegram_message(msg)  # 如有就取消註解
+    # send_telegram_message(msg)
 
 
 if __name__ == "__main__":
