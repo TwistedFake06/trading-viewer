@@ -1,59 +1,43 @@
-// Wait for DOM and library to be ready
+// chart.js
 window.addEventListener("DOMContentLoaded", function () {
-  // 取得 URL 參數
   const params = new URLSearchParams(window.location.search);
   const symbol = params.get("symbol");
   const date = params.get("date");
-
   const titleEl = document.getElementById("title");
   const subtitleEl = document.getElementById("subtitle");
   const errorEl = document.getElementById("error-msg");
-
   if (!symbol || !date) {
-    showError("Missing symbol or date parameters.");
-  } else {
-    titleEl.textContent = `${symbol}`;
-    subtitleEl.textContent = `Intraday Data: ${date}`;
-    initChart();
-  }
-
-  function showError(msg) {
-    errorEl.textContent = msg;
+    errorEl.textContent = "Missing symbol or date.";
     errorEl.style.display = "block";
+    return;
   }
-
+  titleEl.textContent = `${symbol}`;
+  subtitleEl.textContent = `Intraday: ${date}`;
+  initChart();
   async function loadData() {
     try {
       const path = `data/intraday/intraday_${symbol}_${date}.json`;
       const resp = await fetch(path);
-      if (!resp.ok) throw new Error(`Chart data not found: ${path}`);
+      if (!resp.ok) throw new Error(`Data not found: ${path}`);
       return await resp.json();
     } catch (e) {
-      showError(e.message);
+      errorEl.textContent = e.message;
+      errorEl.style.display = "block";
       return null;
     }
   }
-
   async function initChart() {
     const rawData = await loadData();
     if (!rawData || rawData.length === 0) return;
-
     const container = document.getElementById("chart-container");
-
-    // 確保 LightweightCharts 已載入
     if (typeof LightweightCharts === "undefined") {
-      showError("LightweightCharts library failed to load.");
+      errorEl.textContent = "Library failed to load.";
       return;
     }
-
-    // 建立圖表實例
     const chart = LightweightCharts.createChart(container, {
       width: container.clientWidth,
       height: container.clientHeight,
-      layout: {
-        background: { color: "#1a1a1a" },
-        textColor: "#d1d4dc",
-      },
+      layout: { background: { color: "#1a1a1a" }, textColor: "#d1d4dc" },
       grid: {
         vertLines: { color: "#2B2B43" },
         horzLines: { color: "#2B2B43" },
@@ -68,10 +52,7 @@ window.addEventListener("DOMContentLoaded", function () {
       rightPriceScale: {
         borderColor: "#2B2B43",
         autoScale: true,
-        scaleMargins: {
-          top: 0.1,
-          bottom: 0.2,
-        },
+        scaleMargins: { top: 0.1, bottom: 0.2 },
       },
       handleScroll: {
         mouseWheel: false,
@@ -85,8 +66,6 @@ window.addEventListener("DOMContentLoaded", function () {
         pinch: false,
       },
     });
-
-    // 1. Candlestick Series (v4.x API)
     const candleSeries = chart.addCandlestickSeries({
       upColor: "#26a69a",
       downColor: "#ef5350",
@@ -94,7 +73,6 @@ window.addEventListener("DOMContentLoaded", function () {
       wickUpColor: "#26a69a",
       wickDownColor: "#ef5350",
     });
-
     candleSeries.setData(
       rawData.map((d) => ({
         time: d.time,
@@ -104,32 +82,20 @@ window.addEventListener("DOMContentLoaded", function () {
         close: d.close,
       })),
     );
-
-    // 2. VWAP Line Series (v4.x API)
     const vwapSeries = chart.addLineSeries({
       color: "#ff9800",
       lineWidth: 2,
       title: "VWAP",
     });
-
-    vwapSeries.setData(
-      rawData.map((d) => ({
-        time: d.time,
-        value: d.vwap,
-      })),
-    );
-
-    // 3. Volume Histogram (Overlay) (v4.x API)
+    vwapSeries.setData(rawData.map((d) => ({ time: d.time, value: d.vwap })));
     const volumeSeries = chart.addHistogramSeries({
       color: "#26a69a",
       priceFormat: { type: "volume" },
-      priceScaleId: "", // 設為空字串，讓它疊加在主圖底部
+      priceScaleId: "",
     });
-
-    volumeSeries.priceScale().applyOptions({
-      scaleMargins: { top: 0.8, bottom: 0 }, // 限制高度在底部 20%
-    });
-
+    volumeSeries
+      .priceScale()
+      .applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
     volumeSeries.setData(
       rawData.map((d) => ({
         time: d.time,
@@ -140,12 +106,10 @@ window.addEventListener("DOMContentLoaded", function () {
             : "rgba(239, 83, 80, 0.5)",
       })),
     );
-
-    // 自適應視窗大小
-    window.addEventListener("resize", () => {
-      chart.resize(container.clientWidth, container.clientHeight);
-    });
-
+    const resizeObserver = new ResizeObserver(() =>
+      chart.resize(container.clientWidth, container.clientHeight),
+    );
+    resizeObserver.observe(container);
     chart.timeScale().fitContent();
   }
 });

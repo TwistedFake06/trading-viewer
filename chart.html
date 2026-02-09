@@ -1,178 +1,68 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trading Dashboard (Local File)</title>
-    
-    <!-- 引入必要的 Library -->
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-    <script src="https://unpkg.com/technicalindicators/dist/browser.js"></script>
-
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Intraday Chart</title>
+    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
     <style>
-        body { background-color: #111; color: #eee; font-family: sans-serif; margin: 0; padding: 20px; }
-        .controls { 
-            margin-bottom: 20px; 
-            padding: 15px; 
-            background: #222; 
-            border-radius: 8px; 
-            border: 1px solid #333;
-        }
-        input[type="file"] { color: #ddd; }
-        #chart { width: 100%; height: 800px; border: 1px solid #333; }
-        .status { margin-left: 10px; color: #aaa; font-size: 0.9em; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background-color: #1a1a1a;
+        color: #d1d4dc;
+        font-family: sans-serif;
+        padding: 20px;
+      }
+      .header {
+        margin-bottom: 20px;
+      }
+      h1 {
+        font-size: 28px;
+        margin-bottom: 5px;
+        color: #ffffff;
+      }
+      .subtitle {
+        font-size: 14px;
+        color: #888;
+      }
+      #error-msg {
+        display: none;
+        background: #f44336;
+        color: white;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+      }
+      #chart-container {
+        width: 100%;
+        height: 600px;
+        border: 1px solid #2b2b43;
+        border-radius: 4px;
+      }
+      .back-link {
+        display: inline-block;
+        margin-top: 20px;
+        color: #2196f3;
+        text-decoration: none;
+        font-size: 14px;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
     </style>
-</head>
-<body>
-
-    <div class="controls">
-        <h3>📂 選擇本地 JSON 檔案 (無需伺服器)</h3>
-        <!-- 檔案選擇器 -->
-        <input type="file" id="fileInput" accept=".json">
-        <span id="status" class="status">等待選擇檔案...</span>
+  </head>
+  <body>
+    <div class="header">
+      <h1 id="title">Loading...</h1>
+      <div class="subtitle" id="subtitle"></div>
     </div>
-
-    <div id="chart"></div>
-
-    <script>
-        // --- 1. 初始化圖表佈局 (Layout) ---
-        const chartContainer = document.getElementById('chart');
-        const chart = LightweightCharts.createChart(chartContainer, {
-            layout: { background: { color: '#111' }, textColor: '#DDD' },
-            grid: { vertLines: { color: '#222' }, horzLines: { color: '#222' } },
-            rightPriceScale: { borderColor: '#333' },
-            timeScale: { borderColor: '#333', timeVisible: true, secondsVisible: false },
-        });
-
-        // 建立三個視窗 (Pane)
-        // Pane 1: 主圖 (K線 + VWAP)
-        const candleSeries = chart.addCandlestickSeries({ upColor: '#089981', downColor: '#F23645' });
-        const vwapSeries = chart.addLineSeries({ color: '#FF9800', lineWidth: 2, title: 'VWAP' });
-
-        // Pane 2: MACD (獨立座標)
-        const macdHistogram = chart.addHistogramSeries({ 
-            color: '#26a69a', 
-            priceFormat: { type: 'volume' }, 
-            priceScaleId: 'macd', 
-        });
-        const macdLine = chart.addLineSeries({ color: '#2962FF', lineWidth: 1, priceScaleId: 'macd' });
-        const signalLine = chart.addLineSeries({ color: '#FF6D00', lineWidth: 1, priceScaleId: 'macd' });
-
-        // Pane 3: RSI (獨立座標)
-        const rsiSeries = chart.addLineSeries({ 
-            color: '#A485FF', 
-            lineWidth: 2, 
-            priceScaleId: 'rsi',
-            title: 'RSI'
-        });
-
-        // 設定視窗高度比例 (Stacked)
-        chart.priceScale('macd').applyOptions({
-            scaleMargins: { top: 0.65, bottom: 0.15 }, // 佔據底部中間
-        });
-        chart.priceScale('rsi').applyOptions({
-            scaleMargins: { top: 0.85, bottom: 0 }, // 佔據最底部
-        });
-
-        // --- 2. 處理檔案讀取 (File Reader) ---
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            
-            reader.onload = function(event) {
-                try {
-                    const jsonContent = event.target.result;
-                    const rawData = JSON.parse(jsonContent);
-                    document.getElementById('status').innerText = `✅ 已載入: ${file.name}`;
-                    renderChart(rawData);
-                } catch (err) {
-                    console.error(err);
-                    alert("JSON 格式錯誤，請檢查檔案內容！");
-                }
-            };
-
-            reader.readAsText(file);
-        });
-
-        // --- 3. 繪圖邏輯 (與之前相同) ---
-        function renderChart(rawData) {
-            // 清空舊數據 (如果有) - Lightweight Charts 沒有直接 clear，用 setData([]) 覆蓋
-            candleSeries.setData([]); vwapSeries.setData([]); 
-            macdHistogram.setData([]); macdLine.setData([]); signalLine.setData([]); 
-            rsiSeries.setData([]);
-
-            // 準備數據容器
-            const candles = [];
-            const vwapData = [];
-            const closes = [];
-            const timestamps = [];
-
-            // 解析數據
-            rawData.forEach(d => {
-                // 時間格式處理：如果是毫秒 (13位數)，轉為秒 (10位數)
-                const time = d.timestamp > 10000000000 ? d.timestamp / 1000 : d.timestamp;
-                
-                candles.push({ time, open: d.open, high: d.high, low: d.low, close: d.close });
-                if(d.vwap) vwapData.push({ time, value: d.vwap });
-                
-                closes.push(d.close);
-                timestamps.push(time);
-            });
-
-            // 填入主圖數據
-            candleSeries.setData(candles);
-            vwapSeries.setData(vwapData);
-
-            // --- 計算 RSI (14) ---
-            const rsiPeriod = 14;
-            const rsiResult = technicalindicators.RSI.calculate({
-                values: closes,
-                period: rsiPeriod
-            });
-            
-            // RSI 對齊修正
-            const rsiChartData = rsiResult.map((val, index) => ({
-                time: timestamps[index + rsiPeriod], 
-                value: val
-            }));
-            rsiSeries.setData(rsiChartData);
-
-            // --- 計算 MACD (12, 26, 9) ---
-            const macdInput = {
-                values: closes,
-                fastPeriod: 12, slowPeriod: 26, signalPeriod: 9,
-                SimpleMAOscillator: false, SimpleMASignal: false
-            };
-            const macdResult = technicalindicators.MACD.calculate(macdInput);
-
-            // MACD 對齊修正 (MACD 初始長度會少於 slowPeriod)
-            const macdOffset = timestamps.length - macdResult.length;
-            const macdHistData = [];
-            const macdLineData = [];
-            const signalLineData = [];
-
-            macdResult.forEach((d, i) => {
-                const time = timestamps[i + macdOffset];
-                if (time) {
-                    const color = (d.histogram > 0) ? 
-                        (d.histogram > (macdResult[i-1]?.histogram || 0) ? '#00E676' : '#69F0AE') : // 漲勢強/弱綠
-                        (d.histogram < (macdResult[i-1]?.histogram || 0) ? '#FF1744' : '#FF5252');   // 跌勢強/弱紅
-                    
-                    macdHistData.push({ time, value: d.histogram, color: color });
-                    macdLineData.push({ time, value: d.MACD });
-                    signalLineData.push({ time, value: d.signal });
-                }
-            });
-
-            macdHistogram.setData(macdHistData);
-            macdLine.setData(macdLineData);
-            signalLine.setData(signalLineData);
-            
-            // 自動縮放圖表以適應數據
-            chart.timeScale().fitContent();
-        }
-    </script>
-</body>
+    <div id="error-msg"></div>
+    <div id="chart-container"></div>
+    <a href="index.html" class="back-link">← 返回</a>
+    <script defer src="chart.js"></script>
+  </body>
 </html>
