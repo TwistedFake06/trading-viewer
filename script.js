@@ -1,4 +1,4 @@
-// script.js - 完整版（包含指定日期抓取指令複製功能）
+// script.js - 完整版（包含觸發 GitHub Actions 功能）
 
 // 表格排序功能
 function addTableSorting(tableId) {
@@ -156,37 +156,34 @@ document.addEventListener("DOMContentLoaded", () => {
     .toISOString()
     .split("T")[0];
 
-  // 新增：複製指定日期抓取指令
-  const copyBtn = document.getElementById("copyCmdBtn");
-  if (copyBtn) {
-    copyBtn.addEventListener("click", () => {
-      const customDateEl = document.getElementById("customDate");
-      const feedback = document.getElementById("cmdFeedback");
+  // 新增：觸發 GitHub Actions 抓取指定日期
+  const triggerBtn = document.getElementById("triggerActionBtn");
+  if (triggerBtn) {
+    triggerBtn.addEventListener("click", () => {
+      const dateEl = document.getElementById("triggerDate");
+      const feedback = document.getElementById("triggerFeedback");
 
-      if (!customDateEl.value) {
+      if (!dateEl.value) {
         feedback.textContent = "請先選擇日期";
         feedback.style.color = "#dc3545";
         setTimeout(() => (feedback.textContent = ""), 3000);
         return;
       }
 
-      const date = customDateEl.value; // YYYY-MM-DD
-      const symbols =
-        "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT"; // 可自行修改清單
-      const cmd = `python vwap_yf.py "${date}" "${symbols}" --interval "5m" --max-back 5`;
+      const date = dateEl.value; // YYYY-MM-DD
+      const repo = "TwistedFake06/trading-viewer"; // 你的 repo 名稱
+      const workflow = "vwap_yf.yml"; // workflow 檔名
 
-      navigator.clipboard
-        .writeText(cmd)
-        .then(() => {
-          feedback.textContent = "指令已複製！貼到終端機執行即可抓取資料";
-          feedback.style.color = "#28a745";
-        })
-        .catch((err) => {
-          feedback.textContent = "複製失敗，請手動選取複製";
-          feedback.style.color = "#dc3545";
-        });
+      // 產生帶有 custom_date 參數的 Actions 頁面連結
+      const url = `https://github.com/${repo}/actions/workflows/${workflow}?query=workflow%3A${workflow}+custom_date%3A${date}`;
 
-      setTimeout(() => (feedback.textContent = ""), 6000);
+      feedback.textContent = "已開啟 GitHub 頁面，請點 Run workflow 開始抓取";
+      feedback.style.color = "#28a745";
+
+      // 開新分頁
+      window.open(url, "_blank");
+
+      setTimeout(() => (feedback.textContent = ""), 8000);
     });
   }
 });

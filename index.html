@@ -126,12 +126,12 @@
       <button id="runBtn">載入並顯示</button>
     </div>
 
-    <!-- 新增：指定日期抓取區塊 -->
-    <div class="custom-section">
-      <label for="customDate">指定日期抓取 intraday：</label>
-      <input type="date" id="customDate" />
-      <button id="copyCmdBtn">複製抓取指令</button>
-      <span id="cmdFeedback"></span>
+    <!-- 新增：觸發 GitHub Actions 抓取指定日期 -->
+    <div class="trigger-section">
+      <label for="triggerDate">觸發抓取指定日期 intraday：</label>
+      <input type="date" id="triggerDate" />
+      <button id="triggerActionBtn">開啟 GitHub 執行頁面</button>
+      <span id="triggerFeedback"></span>
     </div>
 
     <div id="error"></div>
