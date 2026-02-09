@@ -1,4 +1,4 @@
-// script.js - 完整版（2026-02-09 最終修正）
+// script.js - 完整版（連結改只傳 symbol，按鈕防呆加強）
 
 // 表格排序功能
 function addTableSorting(tableId) {
@@ -39,7 +39,7 @@ function decideScenario(pct) {
   return "C (中性)";
 }
 
-// 渲染 VWAP 表格
+// 渲染 VWAP 表格（連結只傳 symbol）
 function renderVwapResult(dateStr, rows) {
   const resultDiv = document.getElementById("result");
   if (!resultDiv) return console.error("Missing #result");
@@ -50,8 +50,8 @@ function renderVwapResult(dateStr, rows) {
   rows.forEach((row) => {
     const pct = Number(row.close_vwap_pct || 0);
     const cls = pct > 0 ? "trend-up" : pct < 0 ? "trend-down" : "";
-    // 這裡就是你問的 ${row.symbol} 連結定義（可改成只傳 symbol）
-    const link = `<a href="chart.html?symbol=${row.symbol}" target="_blank">${row.symbol}</a>`;  // 已改成只傳 symbol
+    // 只傳 symbol，不帶 date
+    const link = `<a href="chart.html?symbol=${row.symbol}" target="_blank">${row.symbol}</a>`;
 
     html += `<tr>
       <td>${link}</td>
@@ -68,7 +68,7 @@ function renderVwapResult(dateStr, rows) {
   addTableSorting("vwapTable");
 }
 
-// 渲染盤前掃描表格
+// 渲染盤前掃描表格（連結只傳 symbol）
 function renderPremarketResult(dateStr, rows) {
   const resultDiv = document.getElementById("result");
   if (!resultDiv) return console.error("Missing #result");
@@ -81,8 +81,8 @@ function renderPremarketResult(dateStr, rows) {
     const changeCls = pct > 0 ? "trend-up" : pct < 0 ? "trend-down" : "";
     const scoreCls = Number(row.total_score || 0) >= 4 ? "score-high" : "";
 
-    // 這裡也是 ${row.symbol} 的連結定義（已改成只傳 symbol）
-    const link = `<a href="chart.html?symbol=${row.symbol}" target="_blank">${row.symbol}</a>`;  // 已改成只傳 symbol
+    // 只傳 symbol，不帶 date
+    const link = `<a href="chart.html?symbol=${row.symbol}" target="_blank">${row.symbol}</a>`;
 
     html += `<tr>
       <td>${link}</td>
@@ -166,7 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("[DEBUG] 觸發按鈕被點擊");
 
       if (!dateEl) {
-        console.error("[ERROR] 找不到 #triggerDate");
+        console.error("[ERROR] 找不到 #triggerDate 元素");
         if (feedback) {
           feedback.textContent = "頁面錯誤：找不到日期輸入框";
           feedback.style.color = "#dc3545";

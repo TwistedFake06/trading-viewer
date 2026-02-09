@@ -1,53 +1,209 @@
-name: Daily Intraday VWAP Updater (HK 9:00 next day)
+# vwap_yf.py - 最終版：如果該天已存在於累加 JSON，就完全跳過抓取
 
-on:
-  schedule:
-    - cron: '0 1 * * 1-5'  # UTC 01:00 = HK 09:00 次日
-  workflow_dispatch:
-    inputs:
-      custom_date:
-        description: '指定日期 (YYYY-MM-DD)，留空用昨天'
-        required: false
-        default: 'yesterday'
-      symbols:
-        description: '股票清單 (逗號分隔)'
-        required: false
-        default: 'AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT'
+import argparse
+import json
+import os
+import logging
+from datetime import datetime, timedelta
+import pandas as pd
+import yfinance as yf
 
-permissions:
-  contents: write
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
-jobs:
-  update-vwap:
-    runs-on: ubuntu-latest
+def is_trading_day(symbol: str, date_str: str) -> bool:
+    try:
+        start = date_str
+        end = (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+        df = yf.download(symbol, start=start, end=end, interval="1d", progress=False)
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+        if df.empty:
+            return False
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        df.columns = [str(c).lower().strip() for c in df.columns]
 
-      - name: Run VWAP updater
-        env:
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          TG_CHAT_ID:   ${{ secrets.TG_CHAT_ID }}
-        run: |
-          INPUT_DATE="${{ inputs.custom_date || 'yesterday' }}"
-          INPUT_SYMBOLS="${{ inputs.symbols || 'AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT' }}"
-          python vwap_yf.py "$INPUT_DATE" "$INPUT_SYMBOLS" --interval "5m" --max-back 7
+        if "adj close" in df.columns and "close" not in df.columns:
+            df["close"] = df["adj close"]
 
-      - name: Commit and push updated JSON files
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-          git add data/ || echo "No changes"
-          git diff --cached --quiet || git commit -m "Auto update cumulative intraday JSON - $(date -u +'%Y-%m-%d')"
-          git push origin HEAD:main || echo "No push needed"
+        if "volume" not in df.columns or "close" not in df.columns:
+            return False
+
+        last_row = df.iloc[-1]
+        return float(last_row["volume"]) > 0 and pd.notna(last_row["close"])
+
+    except Exception as e:
+        logging.warning(f"檢查交易日失敗 {symbol} {date_str}: {e}")
+        return False
+
+
+def day_exists_in_cumulative_json(symbol: str, date_str: str) -> bool:
+    """檢查累加 JSON 是否已包含該天的資料（根據 time 範圍判斷）"""
+    path = f"data/intraday/intraday_{symbol}.json"
+    if not os.path.exists(path):
+        return False
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if not data:
+            return False
+
+        # 該天開始與結束的 Unix timestamp
+        day_start = int(datetime.strptime(date_str, "%Y-%m-%d").timestamp())
+        day_end = day_start + 86400 - 1  # 次日 00:00 - 1 秒
+
+        # 檢查是否有任何資料的 time 在該天範圍內
+        for entry in data:
+            t = entry.get("time")
+            if t and day_start <= t <= day_end:
+                logging.info(f"{date_str} 已存在於累加 JSON，跳過抓取 ({symbol})")
+                return True
+
+        return False
+
+    except Exception as e:
+        logging.warning(f"檢查累加 JSON 失敗 {path}: {e}")
+        return False
+
+
+def append_or_merge_intraday_json(symbol: str, date_str: str, df: pd.DataFrame) -> str:
+    try:
+        df = df.copy()
+
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+
+        df.columns = [str(c).lower().strip() for c in df.columns]
+
+        if "adj close" in df.columns and "close" not in df.columns:
+            df["close"] = df["adj close"]
+            df = df.drop(columns=["adj close"], errors='ignore')
+
+        required = ["open", "high", "low", "close", "volume"]
+        missing = [col for col in required if col not in df.columns]
+        if missing:
+            raise KeyError(f"缺少欄位: {missing}")
+
+        df["tp"] = (df["high"] + df["low"] + df["close"]) / 3
+        df["pv"] = df["tp"] * df["volume"]
+        df["cum_pv"] = df["pv"].cumsum()
+        df["cum_vol"] = df["volume"].cumsum()
+        df["vwap"] = df["cum_pv"] / df["cum_vol"].replace(0, 1)
+
+        new_data = []
+        for idx, row in df.iterrows():
+            ts = int(idx.timestamp())
+            new_data.append({
+                "time": ts,
+                "open": round(float(row["open"]), 2),
+                "high": round(float(row["high"]), 2),
+                "low": round(float(row["low"]), 2),
+                "close": round(float(row["close"]), 2),
+                "volume": int(row["volume"]),
+                "vwap": round(float(row["vwap"]), 2),
+            })
+
+        path = f"data/intraday/intraday_{symbol}.json"
+
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                existing_data = json.load(f)
+        else:
+            existing_data = []
+
+        time_set = {d["time"] for d in existing_data}
+        merged_data = existing_data[:]
+        added_count = 0
+        for d in new_data:
+            if d["time"] not in time_set:
+                merged_data.append(d)
+                time_set.add(d["time"])
+                added_count += 1
+
+        merged_data.sort(key=lambda x: x["time"])
+
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(merged_data, f, indent=2)
+
+        logging.info(f"累加完成: {path} (新增 {added_count} 筆，總計 {len(merged_data)} 筆)")
+        return path
+
+    except Exception as e:
+        logging.error(f"合併/儲存失敗 {symbol} {date_str}: {e}")
+        return ""
+
+
+def process_symbol(symbol: str, target_date_input: str, interval: str = "5m", max_back_days: int = 7):
+    if target_date_input.lower() == "yesterday":
+        target_date = datetime.now() - timedelta(days=1)
+    else:
+        try:
+            target_date = datetime.strptime(target_date_input, "%Y-%m-%d")
+        except ValueError:
+            logging.error(f"無效日期: {target_date_input}")
+            return
+
+    target_date_str = target_date.strftime("%Y-%m-%d")
+    logging.info(f"處理 {symbol}，目標 {target_date_str} (回溯最多 {max_back_days} 天)")
+
+    found = False
+    for days_ago in range(0, max_back_days + 1):
+        check_date = target_date - timedelta(days=days_ago)
+        check_date_str = check_date.strftime("%Y-%m-%d")
+
+        if not is_trading_day(symbol, check_date_str):
+            logging.info(f"{check_date_str} 非交易日，跳過 ({symbol})")
+            continue
+
+        # 新增檢查：如果該天已存在於累加 JSON，就完全跳過抓取
+        if day_exists_in_cumulative_json(symbol, check_date_str):
+            found = True
+            break
+
+        try:
+            start = check_date_str
+            end = (check_date + timedelta(days=1)).strftime("%Y-%m-%d")
+            df = yf.download(symbol, interval=interval, start=start, end=end, prepost=True, progress=False)
+
+            if df.empty or len(df) < 5:
+                logging.warning(f"無 intraday 資料 {symbol} {check_date_str}")
+                continue
+
+            json_path = append_or_merge_intraday_json(symbol, check_date_str, df)
+            if json_path:
+                found = True
+                logging.info(f"成功累加 {symbol} on {check_date_str}")
+                break
+
+        except Exception as e:
+            logging.error(f"下載失敗 {symbol} {check_date_str}: {e}")
+            continue
+
+    if not found:
+        logging.error(f"找不到任何交易日資料 {symbol} (回溯 {max_back_days} 天)")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="VWAP Calculation - Append to single JSON per symbol")
+    parser.add_argument("date", nargs="?", default="yesterday", help="Target date YYYY-MM-DD or 'yesterday'")
+    parser.add_argument("symbols", help="Comma-separated symbols")
+    parser.add_argument("--interval", default="5m", help="Interval e.g. 5m")
+    parser.add_argument("--max-back", type=int, default=7, help="Max days to backtrack")
+    args = parser.parse_args()
+
+    symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
+
+    logging.info(f"開始處理 {len(symbols)} 個股票，目標 {args.date} (回溯最多 {args.max_back} 天)")
+
+    for sym in symbols:
+        process_symbol(sym, args.date, args.interval, args.max_back)
+
+    msg = f"VWAP 更新完成\n目標日期: {args.date} (及回溯)\n符號: {', '.join(symbols)}"
+    # send_telegram_message(msg)
+
+
+if __name__ == "__main__":
+    main()
