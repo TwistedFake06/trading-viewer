@@ -1,33 +1,57 @@
-name: VWAP with yfinance
+name: Daily Intraday VWAP Updater
 
 on:
   schedule:
-    - cron: '0 11 * * *'
-  workflow_dispatch:
+    # 美股收盤後約 1-2 小時執行（UTC 22:00 ≈ 香港時間次日 06:00）
+    - cron: '0 1 * * 1-5'          # 只在週一到週五執行（避免週末無資料）
+  workflow_dispatch:                # 允許手動觸發
 
 permissions:
   contents: write
 
 jobs:
-  vwap:
+  update-vwap:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - run: pip install -r requirements.txt
-      - env:
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          python-version: '3.11'
+
+      - name: Install dependencies
         run: |
-          DATE=$(date -u -d '1 day ago' +'%Y-%m-%d')
-          python vwap_yf.py "$DATE" "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT" --interval "5m"
-      - run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/ || echo "no changes"
-          git commit -m "Update VWAP" || echo "No changes"
-          git fetch origin main
-          git rebase origin/main
-          git push origin HEAD:main || echo "push failed"
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run VWAP updater (yesterday or latest trading day)
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID:   ${{ secrets.TG_CHAT_ID }}
+        run: |
+          # 預設抓「昨天」的資料（如果昨天是交易日）
+          # 若昨天非交易日，程式內部會自動回溯
+          python vwap_yf.py "yesterday" "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT" --interval "5m" --max-back 7
+
+      - name: Commit and push updated JSON files
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+          # 只 add data/ 資料夾，避免 commit 其他無關變更
+          git add data/ || echo "No changes in data/"
+
+          # 如果有變更才 commit（避免空 commit 錯誤）
+          git diff --cached --quiet || git commit -m "Auto update intraday VWAP JSON - $(date -u +'%Y-%m-%d')"
+
+          # push（如果沒有變更會自動跳過）
+          git push origin HEAD:main || echo "No push needed or push failed"
+
+      - name: Notify on failure (optional)
+        if: failure()
+        run: |
+          echo "VWAP update workflow failed on $(date -u)"
+          # 可選：這裡可以加 curl 發通知到 Telegram 或其他地方
