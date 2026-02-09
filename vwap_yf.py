@@ -1,5 +1,5 @@
 # vwap_yf.py
-# 支援 --max-back 參數的完整版本
+# 最終修正版：處理 MultiIndex、正確判斷交易日、回溯找最近交易日、跳過已存在 JSON
 
 import argparse
 import json
@@ -9,38 +9,65 @@ from datetime import datetime, timedelta
 import pandas as pd
 import yfinance as yf
 
-from utils import send_telegram_message  # 如果你有這個函數
+# 如果你有 utils.py 放 Telegram 函數，就 import；否則註解掉
+# from utils import send_telegram_message
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
 def is_trading_day(symbol: str, date_str: str) -> bool:
+    """檢查指定日期是否為美股交易日（有 volume > 0 且有 Close）"""
     try:
         start = date_str
         end = (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
         df = yf.download(symbol, start=start, end=end, interval="1d", progress=False)
+
         if df.empty:
+            logging.debug(f"{date_str} 無資料 (empty DataFrame)")
             return False
-        df.columns = [c.lower() for c in df.columns]
-        if "volume" not in df or "close" not in df:
+
+        # 處理 MultiIndex 欄位（yfinance 單股票時常見）
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+
+        # 轉小寫 + 去除空白
+        df.columns = [str(c).lower().strip() for c in df.columns]
+
+        # 處理 adj close → close
+        if "adj close" in df.columns and "close" not in df.columns:
+            df["close"] = df["adj close"]
+
+        # 檢查必要欄位
+        if "volume" not in df.columns or "close" not in df.columns:
+            logging.debug(f"{date_str} 缺少 volume 或 close 欄位")
             return False
+
         last_row = df.iloc[-1]
-        return last_row["volume"] > 0 and pd.notna(last_row["close"])
+        volume_ok = float(last_row["volume"]) > 0
+        close_ok = pd.notna(last_row["close"])
+
+        logging.debug(f"{date_str} 檢查: volume={last_row['volume']}, close={last_row['close']}, is_trading={volume_ok and close_ok}")
+
+        return volume_ok and close_ok
+
     except Exception as e:
-        logging.warning(f"檢查交易日失敗 {symbol} {date_str}: {e}")
+        logging.warning(f"檢查交易日失敗 {symbol} {date_str}: {str(e)}")
         return False
+
 
 def json_exists(symbol: str, date_str: str) -> bool:
     path = f"data/intraday/intraday_{symbol}_{date_str}.json"
-    exists = os.path.exists(path)
-    if exists:
-        logging.info(f"JSON 已存在，跳過: {path}")
-    return exists
+    if os.path.exists(path):
+        logging.info(f"JSON 已存在，跳過重抓: {path}")
+        return True
+    return False
+
 
 def save_intraday_json(symbol: str, date_str: str, df: pd.DataFrame) -> str:
     try:
         df = df.copy()
-        df.columns = [c.lower() for c in df.columns]
-        if "adj close" in df and "close" not in df:
+        df.columns = [str(c).lower().strip() for c in df.columns]
+
+        if "adj close" in df.columns and "close" not in df.columns:
             df["close"] = df["adj close"]
 
         df["tp"] = (df["high"] + df["low"] + df["close"]) / 3
@@ -54,45 +81,66 @@ def save_intraday_json(symbol: str, date_str: str, df: pd.DataFrame) -> str:
             ts = int(idx.timestamp())
             chart_data.append({
                 "time": ts,
-                "open": round(float(row["open"]), 2),
-                "high": round(float(row["high"]), 2),
-                "low": round(float(row["low"]), 2),
-                "close": round(float(row["close"]), 2),
-                "volume": int(row["volume"]),
-                "vwap": round(float(row["vwap"]), 2),
+                "open": round(float(row.get("open", 0)), 2),
+                "high": round(float(row.get("high", 0)), 2),
+                "low": round(float(row.get("low", 0)), 2),
+                "close": round(float(row.get("close", 0)), 2),
+                "volume": int(row.get("volume", 0)),
+                "vwap": round(float(row.get("vwap", 0)), 2),
             })
 
         os.makedirs("data/intraday", exist_ok=True)
         path = f"data/intraday/intraday_{symbol}_{date_str}.json"
         with open(path, "w", encoding="utf-8") as f:
             json.dump(chart_data, f, indent=2)
-        logging.info(f"儲存 JSON: {path} ({len(chart_data)} 筆)")
+        logging.info(f"已儲存: {path} ({len(chart_data)} 筆資料)")
         return path
     except Exception as e:
-        logging.error(f"儲存失敗 {symbol} {date_str}: {e}")
+        logging.error(f"儲存 JSON 失敗 {symbol} {date_str}: {e}")
         return ""
 
-def process_symbol(symbol: str, target_date_str: str, interval: str = "5m", max_back_days: int = 7):
-    target_date = datetime.strptime(target_date_str, "%Y-%m-%d") if target_date_str != "yesterday" else datetime.now() - timedelta(days=1)
-    target_date_str = target_date.strftime("%Y-%m-%d")
-    found = False
 
+def process_symbol(symbol: str, target_date_input: str, interval: str = "5m", max_back_days: int = 7):
+    # 處理日期輸入（支援 "yesterday"）
+    if target_date_input.lower() == "yesterday":
+        target_date = datetime.now() - timedelta(days=1)
+    else:
+        try:
+            target_date = datetime.strptime(target_date_input, "%Y-%m-%d")
+        except ValueError:
+            logging.error(f"無效日期格式: {target_date_input}")
+            return
+
+    target_date_str = target_date.strftime("%Y-%m-%d")
+    logging.info(f"處理 {symbol}，目標日期 {target_date_str} (回溯最多 {max_back_days} 天)")
+
+    found = False
     for days_ago in range(0, max_back_days + 1):
         check_date = target_date - timedelta(days=days_ago)
         check_date_str = check_date.strftime("%Y-%m-%d")
 
+        # 1. 檢查是否交易日
         if not is_trading_day(symbol, check_date_str):
             logging.info(f"{check_date_str} 非交易日，跳過 ({symbol})")
             continue
 
+        # 2. 檢查 JSON 是否已存在
         if json_exists(symbol, check_date_str):
             found = True
             break
 
+        # 3. 抓取並儲存
         try:
             start = check_date_str
             end = (check_date + timedelta(days=1)).strftime("%Y-%m-%d")
-            df = yf.download(symbol, interval=interval, start=start, end=end, prepost=True, progress=False)
+            df = yf.download(
+                symbol,
+                interval=interval,
+                start=start,
+                end=end,
+                prepost=True,
+                progress=False
+            )
 
             if df.empty or len(df) < 5:
                 logging.warning(f"無 intraday 資料 {symbol} {check_date_str}")
@@ -103,31 +151,34 @@ def process_symbol(symbol: str, target_date_str: str, interval: str = "5m", max_
                 found = True
                 logging.info(f"成功處理 {symbol} on {check_date_str}")
                 break
+
         except Exception as e:
             logging.error(f"下載失敗 {symbol} {check_date_str}: {e}")
             continue
 
     if not found:
-        logging.error(f"找不到交易日資料 {symbol} (回溯 {max_back_days} 天)")
+        logging.error(f"找不到任何交易日資料 {symbol} (回溯 {max_back_days} 天)")
+
 
 def main():
-    parser = argparse.ArgumentParser(description="VWAP Calculation - Trading Day Check & Skip Existing JSON")
+    parser = argparse.ArgumentParser(description="VWAP Calculation - Auto check trading day & skip existing JSON")
     parser.add_argument("date", nargs="?", default="yesterday", help="Target date YYYY-MM-DD or 'yesterday'")
     parser.add_argument("symbols", help="Comma-separated symbols")
     parser.add_argument("--interval", default="5m", help="Interval e.g. 5m")
-    parser.add_argument("--max-back", type=int, default=7, help="Max days to backtrack")
+    parser.add_argument("--max-back", type=int, default=7, help="Max days to backtrack for trading day")
     args = parser.parse_args()
 
     symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
 
-    logging.info(f"開始處理 {len(symbols)} 個股票，目標 {args.date}")
+    logging.info(f"開始處理 {len(symbols)} 個股票，目標 {args.date} (回溯最多 {args.max_back} 天)")
 
     for sym in symbols:
         process_symbol(sym, args.date, args.interval, args.max_back)
 
     # 可選 Telegram 通知
-    msg = f"VWAP 更新完成\n日期: {args.date} (及回溯)\n符號: {', '.join(symbols)}"
-    send_telegram_message(msg)
+    msg = f"VWAP 更新完成\n目標日期: {args.date} (及回溯)\n符號: {', '.join(symbols)}"
+    # send_telegram_message(msg)  # 如果有這個函數就取消註解
+
 
 if __name__ == "__main__":
     main()

@@ -3,6 +3,7 @@ name: Daily Intraday VWAP Updater (HK 9:00 next day)
 on:
   schedule:
     # UTC 01:00 = 香港時間次日 09:00
+    # 只在週一到週五執行
     - cron: '0 1 * * 1-5'
   workflow_dispatch:
 
