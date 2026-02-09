@@ -40,9 +40,11 @@ jobs:
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID:   ${{ secrets.TG_CHAT_ID }}
-          INPUT_DATE:   ${{ inputs.custom_date || 'yesterday' }}
-          INPUT_SYMBOLS: ${{ inputs.symbols }}
         run: |
+          # 使用 workflow_dispatch inputs，如果沒指定就用 yesterday
+          INPUT_DATE="${{ inputs.custom_date || 'yesterday' }}"
+          INPUT_SYMBOLS="${{ inputs.symbols || 'AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT' }}"
+
           python vwap_yf.py "$INPUT_DATE" "$INPUT_SYMBOLS" --interval "5m" --max-back 7
 
       - name: Commit and push updated JSON files

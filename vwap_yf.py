@@ -1,5 +1,5 @@
 # vwap_yf.py
-# 最終修正版：處理 MultiIndex、正確判斷交易日、回溯找最近交易日、跳過已存在 JSON
+# 最終完整版：處理 MultiIndex、正確判斷交易日、回溯、跳過已存在 JSON
 
 import argparse
 import json
@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import yfinance as yf
 
-# 如果你有 utils.py 放 Telegram 函數，就 import；否則註解掉
+# 如果你有 utils.py 放 Telegram 函數，就 import；否則可註解
 # from utils import send_telegram_message
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
@@ -25,7 +25,7 @@ def is_trading_day(symbol: str, date_str: str) -> bool:
             logging.debug(f"{date_str} 無資料 (empty DataFrame)")
             return False
 
-        # 處理 MultiIndex 欄位（yfinance 單股票時常見）
+        # 處理 MultiIndex 欄位（yfinance 常見）
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
 
@@ -35,17 +35,20 @@ def is_trading_day(symbol: str, date_str: str) -> bool:
         # 處理 adj close → close
         if "adj close" in df.columns and "close" not in df.columns:
             df["close"] = df["adj close"]
+            df = df.drop(columns=["adj close"], errors='ignore')
 
         # 檢查必要欄位
-        if "volume" not in df.columns or "close" not in df.columns:
-            logging.debug(f"{date_str} 缺少 volume 或 close 欄位")
+        required = ["volume", "close"]
+        missing = [col for col in required if col not in df.columns]
+        if missing:
+            logging.debug(f"{date_str} 缺少欄位: {missing}")
             return False
 
         last_row = df.iloc[-1]
         volume_ok = float(last_row["volume"]) > 0
         close_ok = pd.notna(last_row["close"])
 
-        logging.debug(f"{date_str} 檢查: volume={last_row['volume']}, close={last_row['close']}, is_trading={volume_ok and close_ok}")
+        logging.debug(f"{date_str} 檢查: volume={last_row.get('volume', 'N/A')}, close={last_row.get('close', 'N/A')}, is_trading={volume_ok and close_ok}")
 
         return volume_ok and close_ok
 
@@ -65,28 +68,42 @@ def json_exists(symbol: str, date_str: str) -> bool:
 def save_intraday_json(symbol: str, date_str: str, df: pd.DataFrame) -> str:
     try:
         df = df.copy()
+
+        # 強制處理 MultiIndex
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+
         df.columns = [str(c).lower().strip() for c in df.columns]
 
         if "adj close" in df.columns and "close" not in df.columns:
             df["close"] = df["adj close"]
+            df = df.drop(columns=["adj close"], errors='ignore')
 
+        # 檢查必要欄位
+        required = ["open", "high", "low", "close", "volume"]
+        missing = [col for col in required if col not in df.columns]
+        if missing:
+            raise KeyError(f"缺少必要欄位: {missing}。可用欄位: {list(df.columns)}")
+
+        # 計算 VWAP
         df["tp"] = (df["high"] + df["low"] + df["close"]) / 3
         df["pv"] = df["tp"] * df["volume"]
         df["cum_pv"] = df["pv"].cumsum()
         df["cum_vol"] = df["volume"].cumsum()
         df["vwap"] = df["cum_pv"] / df["cum_vol"].replace(0, 1)
 
+        # 產生 chart_data
         chart_data = []
         for idx, row in df.iterrows():
             ts = int(idx.timestamp())
             chart_data.append({
                 "time": ts,
-                "open": round(float(row.get("open", 0)), 2),
-                "high": round(float(row.get("high", 0)), 2),
-                "low": round(float(row.get("low", 0)), 2),
-                "close": round(float(row.get("close", 0)), 2),
-                "volume": int(row.get("volume", 0)),
-                "vwap": round(float(row.get("vwap", 0)), 2),
+                "open": round(float(row["open"]), 2),
+                "high": round(float(row["high"]), 2),
+                "low": round(float(row["low"]), 2),
+                "close": round(float(row["close"]), 2),
+                "volume": int(row["volume"]),
+                "vwap": round(float(row["vwap"]), 2),
             })
 
         os.makedirs("data/intraday", exist_ok=True)
@@ -95,8 +112,12 @@ def save_intraday_json(symbol: str, date_str: str, df: pd.DataFrame) -> str:
             json.dump(chart_data, f, indent=2)
         logging.info(f"已儲存: {path} ({len(chart_data)} 筆資料)")
         return path
+
+    except KeyError as ke:
+        logging.error(f"欄位錯誤 {symbol} {date_str}: {ke}")
+        return ""
     except Exception as e:
-        logging.error(f"儲存 JSON 失敗 {symbol} {date_str}: {e}")
+        logging.error(f"儲存 JSON 失敗 {symbol} {date_str}: {str(e)}")
         return ""
 
 
@@ -175,9 +196,9 @@ def main():
     for sym in symbols:
         process_symbol(sym, args.date, args.interval, args.max_back)
 
-    # 可選 Telegram 通知
+    # 可選：發送 Telegram 通知
     msg = f"VWAP 更新完成\n目標日期: {args.date} (及回溯)\n符號: {', '.join(symbols)}"
-    # send_telegram_message(msg)  # 如果有這個函數就取消註解
+    # send_telegram_message(msg)  # 如有就取消註解
 
 
 if __name__ == "__main__":
