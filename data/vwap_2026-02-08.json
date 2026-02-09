@@ -10,8 +10,8 @@
     "symbol": "NVDA",
     "date": "2026-02-06",
     "close": 185.19,
-    "vwap": 182.7886,
-    "close_vwap_pct": 1.3138
+    "vwap": 182.7421,
+    "close_vwap_pct": 1.3395
   },
   {
     "symbol": "TSLA",
@@ -43,49 +43,49 @@
   },
   {
     "symbol": "ONDS",
-    "date": "2026-02-06",
+    "date": "2026-02-05",
     "close": 9.74,
-    "vwap": 9.2513,
-    "close_vwap_pct": 5.2827
+    "vwap": 9.2457,
+    "close_vwap_pct": 5.3459
   },
   {
     "symbol": "RGTI",
-    "date": "2026-02-06",
-    "close": 17.85,
-    "vwap": 16.8294,
-    "close_vwap_pct": 6.0644
+    "date": "2026-02-08",
+    "close": 7.99,
+    "vwap": 8.8581,
+    "close_vwap_pct": -9.8002
   },
   {
     "symbol": "MU",
-    "date": "2026-02-06",
+    "date": "2026-02-05",
     "close": 394.3446,
     "vwap": 387.1807,
     "close_vwap_pct": 1.8503
   },
   {
     "symbol": "SNDK",
-    "date": "2026-02-06",
-    "close": 598.469,
-    "vwap": 598.1867,
-    "close_vwap_pct": 0.0472
+    "date": "2026-02-08",
+    "close": 368.62,
+    "vwap": 378.659,
+    "close_vwap_pct": -2.6512
   },
   {
     "symbol": "AVGO",
-    "date": "2026-02-06",
+    "date": "2026-02-05",
     "close": 333.4999,
     "vwap": 330.9041,
     "close_vwap_pct": 0.7845
   },
   {
     "symbol": "INTC",
-    "date": "2026-02-06",
-    "close": 50.6601,
-    "vwap": 50.643,
-    "close_vwap_pct": 0.0337
+    "date": "2026-02-08",
+    "close": 306.0,
+    "vwap": 316.0057,
+    "close_vwap_pct": -3.1663
   },
   {
     "symbol": "QUBT",
-    "date": "2026-02-06",
+    "date": "2026-02-05",
     "close": 9.55,
     "vwap": 9.2747,
     "close_vwap_pct": 2.968
