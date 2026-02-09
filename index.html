@@ -7,93 +7,117 @@
     <style>
       body {
         font-family: sans-serif;
-        max-width: 800px;
+        max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
+        background: #f8f9fa;
         color: #333;
       }
       h1 {
         margin-bottom: 24px;
-        font-size: 24px;
       }
       .controls {
-        background: #f0f0f0;
+        background: #e9ecef;
         padding: 16px;
         border-radius: 8px;
         margin-bottom: 24px;
         display: flex;
-        gap: 10px;
+        gap: 12px;
         flex-wrap: wrap;
         align-items: center;
       }
       input[type="date"],
       select,
       button {
-        padding: 8px 12px;
+        padding: 10px 14px;
         font-size: 16px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
       }
       button {
-        background: #007bff;
-        color: #fff;
+        background: #0d6efd;
+        color: white;
         border: none;
         cursor: pointer;
       }
       button:hover {
-        background: #0056b3;
+        background: #0b5ed7;
       }
       #error {
-        color: #d93025;
+        color: #dc3545;
         margin-bottom: 16px;
         font-weight: bold;
+        min-height: 24px;
+      }
+      #result {
+        margin-top: 20px;
       }
       table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 20px;
+        margin-bottom: 30px;
         font-size: 14px;
-        cursor: pointer;
       }
       th,
       td {
-        padding: 8px 12px;
+        padding: 10px 12px;
         text-align: left;
-        border-bottom: 1px solid #ddd;
+        border-bottom: 1px solid #dee2e6;
       }
       th {
-        background: #f7f7f7;
-        font-weight: 600;
+        background: #f1f3f5;
+        cursor: pointer;
+        user-select: none;
+      }
+      th.asc::after {
+        content: " ↑";
+      }
+      th.desc::after {
+        content: " ↓";
       }
       tr:hover {
-        background-color: #f9f9f9;
-      }
-      .score-high {
-        color: #d93025;
-        font-weight: bold;
+        background: #f8f9fa;
       }
       .trend-up {
-        color: #188038;
+        color: #198754;
+        font-weight: bold;
       }
       .trend-down {
-        color: #d93025;
+        color: #dc3545;
+        font-weight: bold;
+      }
+      .score-high {
+        color: #dc3545;
+        font-weight: bold;
+      }
+      a {
+        color: #0d6efd;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
       }
     </style>
   </head>
   <body>
     <h1>📊 VWAP & Premarket Dashboard</h1>
+
     <div class="controls">
       <label for="date">日期：</label>
       <input type="date" id="date" />
+
       <label for="modeSelect">模式：</label>
       <select id="modeSelect">
         <option value="vwap">盤後 VWAP 分析</option>
         <option value="premarket">盤前掃描 (Premarket)</option>
       </select>
-      <button id="runBtn">載入</button>
+
+      <button id="runBtn">載入並顯示</button>
     </div>
+
     <div id="error"></div>
     <div id="result" style="display: none"></div>
-    <script src="script.js" defer></script>
+
+    <script src="script.js"></script>
   </body>
 </html>
