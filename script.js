@@ -1,5 +1,6 @@
-// script.js - 最新修正版 (2026-02-09)
+// script.js - 完整版（包含指定日期抓取指令複製功能）
 
+// 表格排序功能
 function addTableSorting(tableId) {
   const table = document.getElementById(tableId);
   if (!table) return;
@@ -31,12 +32,14 @@ function addTableSorting(tableId) {
   });
 }
 
+// VWAP 狀態判斷
 function decideScenario(pct) {
   if (pct > 0.5) return "A (偏多)";
   if (pct < -0.5) return "B (偏空)";
   return "C (中性)";
 }
 
+// 渲染 VWAP 表格
 function renderVwapResult(dateStr, rows) {
   const resultDiv = document.getElementById("result");
   if (!resultDiv) return console.error("Missing #result");
@@ -64,6 +67,7 @@ function renderVwapResult(dateStr, rows) {
   addTableSorting("vwapTable");
 }
 
+// 渲染盤前掃描表格
 function renderPremarketResult(dateStr, rows) {
   const resultDiv = document.getElementById("result");
   if (!resultDiv) return console.error("Missing #result");
@@ -94,6 +98,7 @@ function renderPremarketResult(dateStr, rows) {
   addTableSorting("premarketTable");
 }
 
+// 主載入邏輯
 document.addEventListener("DOMContentLoaded", () => {
   const runBtn = document.getElementById("runBtn");
   if (!runBtn) return console.error("Missing #runBtn");
@@ -106,10 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!dateEl || !modeEl || !errorEl || !resultEl) {
       console.error("Missing required DOM elements");
-      if (errorEl) {
-        errorEl.textContent = "頁面結構錯誤，請檢查 HTML";
-        errorEl.style.display = "block";
-      }
+      if (errorEl) errorEl.textContent = "頁面結構錯誤，請檢查 HTML";
       return;
     }
 
@@ -149,8 +151,42 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // 預設今天
+  // 預設今天日期
   document.getElementById("date").value = new Date()
     .toISOString()
     .split("T")[0];
+
+  // 新增：複製指定日期抓取指令
+  const copyBtn = document.getElementById("copyCmdBtn");
+  if (copyBtn) {
+    copyBtn.addEventListener("click", () => {
+      const customDateEl = document.getElementById("customDate");
+      const feedback = document.getElementById("cmdFeedback");
+
+      if (!customDateEl.value) {
+        feedback.textContent = "請先選擇日期";
+        feedback.style.color = "#dc3545";
+        setTimeout(() => (feedback.textContent = ""), 3000);
+        return;
+      }
+
+      const date = customDateEl.value; // YYYY-MM-DD
+      const symbols =
+        "AMD,NVDA,TSLA,AAPL,SMCI,MSFT,ONDS,RGTI,MU,SNDK,AVGO,INTC,QUBT"; // 可自行修改清單
+      const cmd = `python vwap_yf.py "${date}" "${symbols}" --interval "5m" --max-back 5`;
+
+      navigator.clipboard
+        .writeText(cmd)
+        .then(() => {
+          feedback.textContent = "指令已複製！貼到終端機執行即可抓取資料";
+          feedback.style.color = "#28a745";
+        })
+        .catch((err) => {
+          feedback.textContent = "複製失敗，請手動選取複製";
+          feedback.style.color = "#dc3545";
+        });
+
+      setTimeout(() => (feedback.textContent = ""), 6000);
+    });
+  }
 });
