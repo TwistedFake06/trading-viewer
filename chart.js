@@ -1,7 +1,7 @@
-// chart.js
+// chart.js - v4.x 相容版
 
-window.addEventListener("DOMContentLoaded", () => {
-  const params = new URLSearchParams(location.search);
+window.addEventListener("DOMContentLoaded", function () {
+  const params = new URLSearchParams(window.location.search);
   const symbol = params.get("symbol")?.toUpperCase();
   const date = params.get("date");
 
@@ -16,22 +16,30 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   titleEl.textContent = symbol;
-  subtitleEl.textContent = `Intraday Data: ${date}`;
+  subtitleEl.textContent = `Intraday: ${date}`;
 
-  initChart(symbol, date);
+  initChart();
 });
 
-async function initChart(symbol, date) {
+async function initChart() {
+  const params = new URLSearchParams(window.location.search);
+  const symbol = params.get("symbol")?.toUpperCase();
+  const date = params.get("date");
+
   const container = document.getElementById("chart-container");
   const errorEl = document.getElementById("error-msg");
 
   try {
     const path = `data/intraday/intraday_${symbol}_${date}.json`;
     const resp = await fetch(path);
-    if (!resp.ok) throw new Error(`找不到圖表資料：${path} (${resp.status})`);
+    if (!resp.ok) throw new Error(`資料不存在: ${path} (${resp.status})`);
 
     const rawData = await resp.json();
-    if (!rawData?.length) throw new Error("資料為空");
+    if (rawData.length === 0) throw new Error("JSON 資料為空");
+
+    if (typeof LightweightCharts === "undefined") {
+      throw new Error("LightweightCharts library 未載入，請檢查 CDN");
+    }
 
     const chart = LightweightCharts.createChart(container, {
       width: container.clientWidth,
@@ -87,9 +95,10 @@ async function initChart(symbol, date) {
       })),
     );
 
-    window.addEventListener("resize", () =>
-      chart.resize(container.clientWidth, container.clientHeight),
-    );
+    window.addEventListener("resize", () => {
+      chart.resize(container.clientWidth, container.clientHeight);
+    });
+
     chart.timeScale().fitContent();
   } catch (e) {
     console.error(e);
